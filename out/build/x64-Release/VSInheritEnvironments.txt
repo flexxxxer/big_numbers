@@ -1,1 +1,1 @@
-msvc_x64_x64
+msvc_x64

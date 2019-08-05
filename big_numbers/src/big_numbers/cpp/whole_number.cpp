@@ -51,11 +51,12 @@ std::vector<byte> whole_number::ulong_to_bytes(const uint64_t number)
 
 void whole_number::clear_zero_bytes(std::vector<byte>& bytes)
 {
-	while (bytes.size())
+	while (!bytes.empty())
+	{
 		if (bytes.back() != 0)
 			break;
-		else
-			bytes.pop_back();
+		bytes.pop_back();
+	}
 }
 void whole_number::clear_zero_bytes(whole_number& number)
 {
@@ -141,7 +142,7 @@ void whole_number::add_logic_gate(whole_number& destination, const whole_number&
 
 		// Carry is shifted by one so that adding  
 		// it to x gives the required sum
-		carry.shift_to_left(1);
+		carry.shl(1);
 
 		carry_value = carry;
 	}
@@ -197,7 +198,7 @@ void whole_number::sub_logic_gate(whole_number& destination, const whole_number&
 
 		// Carry is shifted by one so that adding  
 		// it to x gives the required sum
-		borrow.shift_to_left(1);
+		borrow.shl(1);
 
 		borrow_value = borrow;
 	}
@@ -230,18 +231,18 @@ void whole_number::div(const whole_number& dividend, const whole_number& divisor
 		throw std::invalid_argument("divisor is zero");
 
 	const whole_number _dividend = dividend, _divisor = divisor;
-	uint64_t k = _dividend.num_bits() + _divisor.num_bits();
+	const uint64_t k = _dividend.num_bits() + _divisor.num_bits();
 
 	whole_number pow2 = whole_number::one();
-	pow2.shift_to_left(k + 1);
+	pow2 <<= k + 1;
 
-	whole_number x = _dividend.difference(_divisor);
+	whole_number x = _dividend - _divisor;
 	whole_number last_x, last_last_x;
 
 	while (true)
 	{
-		x.mul(pow2.difference(x.product(_divisor))); // x = (x * (pow2 - x * _divisor));
-		x.shift_to_right(k);
+		x = x * (pow2 - x * _divisor);
+		x >>= k;
 
 		if (whole_number::compare(x, last_x) == 0 ||
 			whole_number::compare(x, last_last_x) == 0) break;
@@ -250,20 +251,19 @@ void whole_number::div(const whole_number& dividend, const whole_number& divisor
 		last_x = x;
 	}
 
-	whole_number _quotient = _dividend.product(x);
-	_quotient.shift_to_right(k);
+	whole_number _quotient = _dividend * x;
+	_quotient >>= k;
 
-	if (whole_number::compare(_quotient.product(_divisor),_dividend) == -1)
-		_quotient.add(whole_number::one());
+	if (whole_number::compare(_quotient * _divisor,_dividend) == -1)
+		++_quotient;
 
-	if (whole_number::compare(_quotient.product(_divisor), _dividend) == 1) 
-		_quotient.sub(whole_number::one()), remainder = _dividend.difference(_quotient.product(_divisor));
+	if (whole_number::compare(_quotient * _divisor, _dividend) == 1) 
+		--_quotient, remainder = _dividend - (_quotient * _divisor);
 	else
-		remainder.bytes.clear();
+		remainder.set_zero();
 
 	quotient = _quotient;
 }
-
 
 whole_number::whole_number() = default;
 whole_number::whole_number(std::string str) : whole_number()
@@ -331,12 +331,20 @@ whole_number::~whole_number()
 	this->bytes.~vector();
 }
 
+whole_number whole_number::zero()
+{
+	return std::vector<byte>();
+}
 whole_number whole_number::one()
 {
 	whole_number one = { 1 };
 	return one;
 }
-
+whole_number whole_number::two()
+{
+	whole_number one = { 2 };
+	return one;
+}
 
 std::string whole_number::to_string() const
 {
@@ -345,12 +353,12 @@ std::string whole_number::to_string() const
 }
 std::string whole_number::to_string_hex() const
 {
-	const std::string hexmap = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+	const std::string hex_map = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 
 	std::string s(bytes.size() * 2, ' ');
 	for (uint64_t i = 0; i < bytes.size(); ++i) {
-		s[2 * i] = hexmap[(bytes[i] & 0xF0) >> 4];
-		s[2 * i + 1] = hexmap[bytes[i] & 0x0F];
+		s[2 * i] = hex_map[(bytes[i] & 0xF0) >> 4];
+		s[2 * i + 1] = hex_map[bytes[i] & 0x0F];
 	}
 
 	std::string result = "0x";
@@ -370,12 +378,14 @@ whole_number whole_number::and (const whole_number& number) const
 	for (int i = 0; i < result_size; i++)
 		result_bytes[i] = number.bytes[i] & this->bytes[i];
 
+	whole_number::clear_zero_bytes(result_bytes);
+
 	return result_bytes;
 }
 whole_number whole_number::or (const whole_number& number) const
 {
-	size_t calculated_part_size = std::min(this->bytes.size(), number.bytes.size());
-	size_t filled_part_size = std::max(this->bytes.size(), number.bytes.size()) - calculated_part_size;
+	const size_t calculated_part_size = std::min(this->bytes.size(), number.bytes.size());
+	const size_t filled_part_size = std::max(this->bytes.size(), number.bytes.size()) - calculated_part_size;
 	auto& greater_number_bytes = this->bytes.size() > number.bytes.size() ? this->bytes : number.bytes;
 	std::vector<byte> result_bytes(calculated_part_size + filled_part_size);
 
@@ -384,6 +394,8 @@ whole_number whole_number::or (const whole_number& number) const
 
 	for (uint64_t i = calculated_part_size; i < filled_part_size + calculated_part_size; i++)
 		result_bytes[i] = greater_number_bytes[i];
+
+	whole_number::clear_zero_bytes(result_bytes);
 
 	return result_bytes;
 }
@@ -400,6 +412,8 @@ whole_number whole_number::xor (const whole_number& number) const
 	for (uint64_t i = calculated_part_size; i < filled_part_size + calculated_part_size; i++)
 		result_bytes[i] = greater_number_bytes[i];
 
+	whole_number::clear_zero_bytes(result_bytes);
+
 	return result_bytes;
 }
 whole_number whole_number::not() const
@@ -412,9 +426,10 @@ whole_number whole_number::not() const
 	return result_bytes;
 }
 
-void whole_number::shift_to_right(const uint64_t shift_count)
+void whole_number::shr(const uint64_t shift_count)
 {
-	// if this is zero => return;
+	if (this->is_zero())
+		return;
 
 	byte* data = nullptr;
 	int64_t i = 0;
@@ -437,7 +452,7 @@ void whole_number::shift_to_right(const uint64_t shift_count)
 
 	whole_number::clear_zero_bytes(this->bytes);
 }
-void whole_number::shift_to_left(const uint64_t shift_count)
+void whole_number::shl(const uint64_t shift_count)
 {
 	// if this is zero => return;
 
@@ -627,14 +642,225 @@ bool whole_number::is_two() const
 {
 	return this->bytes.size() == 1 && bytes[0] == 2;
 }
+bool whole_number::is_power_of_two() const
+{
+	if (this->is_zero())
+		return false;
 
+	if (this->is_one())
+		return false;
 
-
+	return (*this & (*this - 1u)).is_zero();
+}
 
 uint64_t whole_number::num_bits() const
 {
 	// in one byte eight bits :)
 	return this->bytes.size() * 8;
+}
+bool whole_number::is_odd() const
+{
+	return !this->bytes.empty() && this->bytes.front() & 1;
+}
+bool whole_number::is_even() const
+{
+	return !this->is_odd();
+}
+
+void whole_number::set_zero()
+{
+	this->bytes.clear();
+}
+
+whole_number& whole_number::operator++()
+{
+	if (this->is_zero())
+	{
+		this->bytes.push_back(1); 
+		return *this;
+	}
+
+	auto byte_iterator = this->bytes.begin();
+	const auto end = this->bytes.end();
+
+	while (++*byte_iterator == 0)
+	{
+		if(++byte_iterator == end)
+			break;
+	}
+	
+	if (byte_iterator == end) // возможно сравнение можно заменить, но это не точно
+		this->bytes.push_back(1);
+
+	return *this;
+}
+whole_number& whole_number::operator--()
+{
+	if (this->bytes.empty())
+		throw std::invalid_argument("number can not be less then zero");
+
+	auto bytes_iterator = this->bytes.begin();
+
+	if(--*bytes_iterator == 0xFF)
+	{
+		while (*++bytes_iterator == 0)
+			*bytes_iterator = 0xFF;
+
+		--*bytes_iterator;
+	}
+
+	if (this->bytes.back() == 0)
+		this->bytes.pop_back();
+
+	return *this;
+}
+
+whole_number& whole_number::operator++(int)
+{
+	return ++*this;
+}
+whole_number& whole_number::operator--(int)
+{
+	return --*this;
+}
+
+whole_number whole_number::operator + (const whole_number& number) const
+{
+	return this->sum(number);
+}
+whole_number whole_number::operator - (const whole_number& number) const
+{
+	return this->difference(number);
+}
+whole_number whole_number::operator * (const whole_number& number) const
+{
+	return this->product(number);
+}
+whole_number whole_number::operator / (const whole_number& number) const
+{
+	return this->division(number);
+}
+
+whole_number whole_number::operator << (const uint64_t shift_count) const
+{
+	whole_number copy = *this;
+	copy.shl(shift_count);
+
+	return copy;
+}
+void whole_number::operator <<= (const uint64_t shift_count) 
+{
+	this->shl(shift_count);
+}
+whole_number whole_number::operator >> (const uint64_t shift_count) const
+{
+	whole_number copy = *this;
+	copy.shr(shift_count);
+
+	return copy;
+}
+void whole_number::operator >>= (const uint64_t shift_count)
+{
+	this->shr(shift_count);
+}
+
+whole_number whole_number::operator & (const whole_number& number) const
+{
+	return this-> and (number);
+}
+whole_number whole_number::operator ^ (const whole_number& number) const
+{
+	return this-> xor (number);
+}
+whole_number whole_number::operator | (const whole_number& number) const
+{
+	return this-> or (number);
+}
+
+whole_number whole_number::pow_naive(const whole_number& exponent) const
+{
+	if ( exponent.is_zero() )
+		return whole_number::one();
+	if ( exponent.is_one() )
+		return *this;
+
+	whole_number result = whole_number::one(), exp = exponent;
+
+	while ( exp.is_not_zero() )
+	{
+		result.mul(*this);
+		--exp;
+	}
+
+	return result;
+}
+whole_number whole_number::pow_fast(const whole_number& exponent) const
+{
+	if (exponent.is_zero())
+		return whole_number::one();
+	if (exponent.is_one())
+		return *this;
+
+	whole_number power = exponent;
+	whole_number result = whole_number::one();
+	whole_number x = *this;
+
+	while( power.is_not_zero() )
+	{
+		if( power.is_even() )
+		{
+			x = x * x;
+			power >>= 1;
+		}
+		else
+		{
+			result = result * x;
+			x = x * x;
+			--power >>= 1;
+		}
+	}
+
+	return result;
+}
+
+whole_number whole_number::factorial_naive() const
+{
+	whole_number result = whole_number::one();
+	whole_number n = *this; ++n;
+
+	while( !n.is_one() )
+		result = result * --n;
+
+	return result;
+}
+whole_number whole_number::factorial_fast() const
+{
+	struct factorial
+	{
+		static whole_number prod_tree(const whole_number& l, const whole_number& r)
+		{
+			const sbyte compare_result = whole_number::compare(l, r);
+			if (compare_result == 1)
+				return whole_number::one();
+			if (compare_result == 0)
+				return  l;
+			if ((r - l).is_one())
+				return r * l;
+
+			whole_number m = (l + r) >> 1; // (l + r) / 2
+			whole_number m_plus_one = m; ++m_plus_one;
+
+			return factorial::prod_tree(l, m) * factorial::prod_tree(m_plus_one, r);
+		}
+	};
+
+	if (this->is_zero())
+		return whole_number::one();
+
+	if (this->is_one() || this->is_two())
+		return *this;
+
+	return factorial::prod_tree(whole_number::two(), *this);
 }
 
 

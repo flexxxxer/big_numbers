@@ -32,7 +32,7 @@
 					]
 				}
 			],
-			"name" : "RelWithDebInfo",
+			"name" : "Release",
 			"projects" : 
 			[
 				{
@@ -53,7 +53,7 @@
 				{
 					"directoryIndex" : 1,
 					"id" : "big_numbers::@7c0e4723a882520ba49b",
-					"jsonFile" : "target-big_numbers-RelWithDebInfo-f5ab795f92a1c06ca7a8.json",
+					"jsonFile" : "target-big_numbers-Release-2372ce8813d7161ec3ee.json",
 					"name" : "big_numbers",
 					"projectIndex" : 0
 				}

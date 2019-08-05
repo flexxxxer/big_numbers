@@ -60,11 +60,13 @@ namespace numbers
 		whole_number(std::string str);
 		whole_number(std::vector<byte> bytes);
 		whole_number(std::initializer_list<byte> bytes);
-		whole_number(const uint64_t number);
-		whole_number(const uint32_t number);
+		whole_number(uint64_t number);
+		whole_number(uint32_t number);
 		~whole_number();
 
+		static whole_number zero();
 		static whole_number one();
+		static whole_number two();
 
 		std::string to_string() const;
 		std::string to_string_hex() const;
@@ -74,8 +76,8 @@ namespace numbers
 		whole_number xor (const whole_number& number) const;
 		whole_number not () const;
 
-		void shift_to_right(const uint64_t shift_count);
-		void shift_to_left(const uint64_t shift_count);
+		void shr(uint64_t shift_count);
+		void shl(uint64_t shift_count);
 
 		void add(const whole_number& number);
 		whole_number sum(const whole_number& number) const;
@@ -93,8 +95,42 @@ namespace numbers
 
 		bool is_one() const;
 		bool is_two() const;
+		bool is_power_of_two() const;
 
 		uint64_t num_bits() const;
+		bool is_odd() const;
+		bool is_even() const;
+
+		void set_zero();
+
+		// prefix
+		whole_number& operator ++ (); // inc
+		whole_number& operator-- (); // dec
+
+		// postfix
+		whole_number& operator ++ (int); // inc
+		whole_number& operator-- (int); // dec
+
+		whole_number operator + (const whole_number& number) const;
+		whole_number operator - (const whole_number& number) const;
+		whole_number operator * (const whole_number& number) const;
+		whole_number operator / (const whole_number& number) const;
+
+		whole_number operator << (uint64_t shift_count) const;
+		void operator <<= (uint64_t shift_count);
+		whole_number operator >> (uint64_t shift_count) const;
+		void operator >>= (uint64_t shift_count);
+
+		whole_number operator & (const whole_number& number) const;
+		whole_number operator | (const whole_number& number) const;
+		whole_number operator ^ (const whole_number& number) const;
+
+		whole_number pow_naive(const whole_number& exponent) const;
+		whole_number pow_fast(const whole_number& exponent) const;
+
+		whole_number factorial_naive() const;
+		whole_number factorial_fast() const;
+		
 	};
 }
 
