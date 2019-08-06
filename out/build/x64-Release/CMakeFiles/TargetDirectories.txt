@@ -1,5 +1,0 @@
-C:/Users/Alex/source/repos/big_numbers/out/build/x64-Release/CMakeFiles/edit_cache.dir
-C:/Users/Alex/source/repos/big_numbers/out/build/x64-Release/CMakeFiles/rebuild_cache.dir
-C:/Users/Alex/source/repos/big_numbers/out/build/x64-Release/big_numbers/CMakeFiles/big_numbers.dir
-C:/Users/Alex/source/repos/big_numbers/out/build/x64-Release/big_numbers/CMakeFiles/edit_cache.dir
-C:/Users/Alex/source/repos/big_numbers/out/build/x64-Release/big_numbers/CMakeFiles/rebuild_cache.dir
