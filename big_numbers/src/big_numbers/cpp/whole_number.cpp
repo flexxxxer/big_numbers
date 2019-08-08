@@ -1,3 +1,4 @@
+#include <iostream>
 #ifndef WHOLE_NUMBER_CPP
 #define WHOLE_NUMBER_CPP
 
@@ -273,8 +274,8 @@ whole_number::whole_number(std::string str) : whole_number()
 		{
 			if (symbol <= 'Z' && symbol >= 'A')
 				return char(symbol - ('Z' - 'z'));
-			else
-				return symbol;
+			
+			return symbol;
 		}
 	);
 
@@ -368,6 +369,17 @@ std::string whole_number::to_string_hex() const
 		result.push_back(s[i + 1]);
 	}
 	return result;
+}
+uint64_t numbers::whole_number::to_uint64_t() const
+{
+	if (this->bytes.size() > 8)
+		throw std::exception("is very big for uint64_t");
+	if (bytes.empty())
+		return 0u;
+
+	std::vector<byte> bts = this->bytes; bts.resize(8);
+	uint64_t* dt = reinterpret_cast<uint64_t*>(bts.data());
+	return *dt;
 }
 
 whole_number whole_number::and (const whole_number& number) const
@@ -510,24 +522,31 @@ void whole_number::mul(const whole_number& number)
 {
 	struct fft
 	{
-		static uint64_t calculate_expr_value(const std::vector<byte>& a, const std::vector<byte>& b, uint64_t left, uint64_t right)
+		__declspec(noinline) static uint64_t calculate_expr_value(const std::vector<byte>& a, const std::vector<byte>& b, 
+			const uint64_t left, const uint64_t right)
 		{
 			uint64_t sum = 0;
+			uint64_t loc_left = left - 1, loc_right = right + 1;
 
-			while (left < right)
+			while (++loc_left < --loc_right)
 			{
-				const uint32_t pairs_value = a[left] * b[right] + a[right] * b[left];
+				const uint32_t pairs_value = a[loc_left] * b[loc_right] + a[loc_right] * b[loc_left];
 				sum += pairs_value;
-
-				right--, left++;
 			}
 
-			if (left == right)
-				sum += static_cast<uint64_t>(a[left]) * static_cast<uint64_t>(b[right]);
+			if (loc_left == loc_right)
+				sum += static_cast<uint64_t>(a[loc_left]) * static_cast<uint64_t>(b[loc_right]);
 
 			return sum;
 		}
+
+		__declspec(noinline) static uint64_t calculate_expr_value_fast(const std::vector<byte>& greater, const std::vector<byte>& lower,
+			const uint64_t left, const uint64_t right)
+		{
+			return 0u;
+		}
 	};
+
 	if (this->is_zero() || number.is_zero())
 	{
 		this->bytes.clear(); // set zero
@@ -571,8 +590,8 @@ void whole_number::mul(const whole_number& number)
 
 	for(uint64_t i = 1; i < _right; i++)
 	{
-		const uint64_t value = fft::calculate_expr_value(mul_vector_a, mul_vector_b, _left, i) 
-				+ fft_calculations[current_fft_calc_index - 1].second;
+		uint64_t value = fft::calculate_expr_value(mul_vector_a, mul_vector_b, _left, i);
+		value += fft_calculations[current_fft_calc_index - 1].second;
 
 		fft_calculations[current_fft_calc_index++] = std::pair<byte, uint64_t>(static_cast<byte>(value), value >> 8);
 	}
@@ -582,8 +601,8 @@ void whole_number::mul(const whole_number& number)
 
 	for (uint64_t i = 1; i < _right; i++)
 	{
-		const uint64_t value = fft::calculate_expr_value(mul_vector_a, mul_vector_b, i, _right)
-			+ fft_calculations[current_fft_calc_index - 1].second;
+		uint64_t value = fft::calculate_expr_value(mul_vector_a, mul_vector_b, i, _right);
+		value += fft_calculations[current_fft_calc_index - 1].second;
 
 		fft_calculations[current_fft_calc_index++] = std::pair<byte, uint64_t>(static_cast<byte>(value), value >> 8);
 	}
@@ -648,9 +667,10 @@ bool whole_number::is_power_of_two() const
 		return false;
 
 	if (this->is_one())
-		return false;
+		return true;
 
-	return (*this & (*this - 1u)).is_zero();
+	whole_number this_minus_one = *this; --this_minus_one;
+	return (*this & this_minus_one).is_zero();
 }
 
 uint64_t whole_number::num_bits() const
@@ -777,24 +797,7 @@ whole_number whole_number::operator | (const whole_number& number) const
 	return this-> or (number);
 }
 
-whole_number whole_number::pow_naive(const whole_number& exponent) const
-{
-	if ( exponent.is_zero() )
-		return whole_number::one();
-	if ( exponent.is_one() )
-		return *this;
-
-	whole_number result = whole_number::one(), exp = exponent;
-
-	while ( exp.is_not_zero() )
-	{
-		result.mul(*this);
-		--exp;
-	}
-
-	return result;
-}
-whole_number whole_number::pow_fast(const whole_number& exponent) const
+whole_number whole_number::pow(const whole_number& exponent) const
 {
 	if (exponent.is_zero())
 		return whole_number::one();
@@ -823,17 +826,7 @@ whole_number whole_number::pow_fast(const whole_number& exponent) const
 	return result;
 }
 
-whole_number whole_number::factorial_naive() const
-{
-	whole_number result = whole_number::one();
-	whole_number n = *this; ++n;
-
-	while( !n.is_one() )
-		result = result * --n;
-
-	return result;
-}
-whole_number whole_number::factorial_fast() const
+whole_number whole_number::factorial() const
 {
 	struct factorial
 	{
@@ -843,7 +836,7 @@ whole_number whole_number::factorial_fast() const
 			if (compare_result == 1)
 				return whole_number::one();
 			if (compare_result == 0)
-				return  l;
+				return l;
 			if ((r - l).is_one())
 				return r * l;
 
@@ -852,6 +845,20 @@ whole_number whole_number::factorial_fast() const
 
 			return factorial::prod_tree(l, m) * factorial::prod_tree(m_plus_one, r);
 		}
+
+		static whole_number prod_tree_uint64t(const uint64_t l, const uint64_t r)
+		{
+			if (l > r)
+				return 1ull;
+			if (l == r)
+				return l;
+			if (r - l == 1)
+				return static_cast<whole_number>(l) * r;
+
+			uint64_t m = (l + r) >> 1;
+
+			return prod_tree_uint64t(l, m) * prod_tree_uint64t(m + 1, r);
+		}
 	};
 
 	if (this->is_zero())
@@ -859,6 +866,9 @@ whole_number whole_number::factorial_fast() const
 
 	if (this->is_one() || this->is_two())
 		return *this;
+
+	if (this->bytes.size() <= 7) 
+		return factorial::prod_tree_uint64t(2u, this->to_uint64_t());
 
 	return factorial::prod_tree(whole_number::two(), *this);
 }
