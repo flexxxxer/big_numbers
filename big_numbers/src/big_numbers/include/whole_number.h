@@ -71,6 +71,7 @@ namespace numbers
 		std::string to_string() const;
 		std::string to_string_hex() const;
 		uint64_t to_uint64_t() const;
+		std::vector<byte> to_bytes() const;
 
 		whole_number and (const whole_number& number) const;
 		whole_number or (const whole_number & number) const;
@@ -87,6 +88,7 @@ namespace numbers
 		whole_number difference(const whole_number& number) const;
 
 		void mul(const whole_number& number);
+		void fast_mul(const whole_number& number);
 		whole_number product(const whole_number& multiplier) const;
 
 		whole_number division(const whole_number& divisor) const;
@@ -127,9 +129,10 @@ namespace numbers
 		whole_number operator ^ (const whole_number& number) const;
 
 		whole_number pow(const whole_number& exponent) const;
-
 		whole_number factorial() const;
-		
+		whole_number sqrt() const;
+		whole_number log_n(uint64_t n) const;
+		whole_number log2() const;
 	};
 }
 
