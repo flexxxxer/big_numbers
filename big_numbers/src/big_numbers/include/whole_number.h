@@ -56,6 +56,16 @@ namespace numbers
 
 	public:
 
+		class extensions
+		{
+			extensions() = default;
+		public:
+			static whole_number max(const whole_number& a, const whole_number& b);
+			static whole_number min(const whole_number& a, const whole_number& b);
+			static whole_number gcd(const whole_number& a, const whole_number& b);
+			static whole_number lcm(const whole_number& a, const whole_number& b);
+		};
+
 		whole_number();
 		whole_number(std::string str);
 		whole_number(std::vector<byte> bytes);
@@ -78,8 +88,8 @@ namespace numbers
 		whole_number xor (const whole_number& number) const;
 		whole_number not () const;
 
-		void shr(uint64_t shift_count);
-		void shl(uint64_t shift_count);
+		void shr(size_t shift_count);
+		void shl(size_t shift_count);
 
 		void add(const whole_number& number);
 		whole_number sum(const whole_number& number) const;
@@ -100,7 +110,7 @@ namespace numbers
 		bool is_two() const;
 		bool is_power_of_two() const;
 
-		uint64_t num_bits() const;
+		size_t num_bits() const;
 		bool is_odd() const;
 		bool is_even() const;
 
@@ -118,11 +128,12 @@ namespace numbers
 		whole_number operator - (const whole_number& number) const;
 		whole_number operator * (const whole_number& number) const;
 		whole_number operator / (const whole_number& number) const;
+		whole_number operator % (const whole_number& number) const;
 
-		whole_number operator << (uint64_t shift_count) const;
-		void operator <<= (uint64_t shift_count);
-		whole_number operator >> (uint64_t shift_count) const;
-		void operator >>= (uint64_t shift_count);
+		whole_number operator << (size_t shift_count) const;
+		void operator <<= (size_t shift_count);
+		whole_number operator >> (size_t shift_count) const;
+		void operator >>= (size_t shift_count);
 
 		whole_number operator & (const whole_number& number) const;
 		whole_number operator | (const whole_number& number) const;

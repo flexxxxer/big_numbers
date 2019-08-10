@@ -1,12 +1,12 @@
-#include <iostream>
 #ifndef WHOLE_NUMBER_CPP
 #define WHOLE_NUMBER_CPP
 
 #include <string> // use std::string
 #include <algorithm> // use std::transform
 #include <tuple> // std::tuple
-#include <utility>
-#include <vector>
+#include <sstream> // std::string stream
+#include <vector> // std::vector
+
 #include "../include/whole_number.h" // use numbers::whole_number
 
 using namespace numbers;
@@ -55,6 +55,7 @@ void whole_number::clear_zero_bytes(std::vector<byte>& bytes)
 	{
 		if (bytes.back() != 0)
 			break;
+
 		bytes.pop_back();
 	}
 }
@@ -70,19 +71,25 @@ sbyte whole_number::compare_optimized(const whole_number& a, const whole_number&
 	if (a.bytes.size() < b.bytes.size())
 		return -1;
 
+	if (a.bytes.empty())
+		return 0;
+
 	const byte* a_data = a.bytes.data();
 	const byte* b_data = b.bytes.data();
-	int64_t index = a.bytes.size() - 1;
+	size_t index = a.bytes.size() - 1;
 
 	for (; index % 16 != 0; index--)
 	{
 		if (a.bytes[index] > b.bytes[index])
 			return 1;
-		else if (a.bytes[index] < b.bytes[index])
+		if (a.bytes[index] < b.bytes[index])
 			return -1;
 	}
 
-	for (index -= 16; index != -16; index -= 16)
+	if (index == 0)
+		return 0;
+
+	for (index -= 16; index != 0; index -= 16)
 	{
 		const int64_t& a_front_part = a_data[index + 8];
 		const int64_t& b_front_part = b_data[index + 8];
@@ -102,25 +109,49 @@ sbyte whole_number::compare_optimized(const whole_number& a, const whole_number&
 			return -1;
 	}
 
+	const int64_t& a_front_part = a_data[index + 8];
+	const int64_t& b_front_part = b_data[index + 8];
+
+	if (a_front_part > b_front_part)
+		return 1;
+	if (a_front_part < b_front_part)
+		return -1;
+
+	const int64_t& a_back_part = a_data[index];
+	const int64_t& b_back_part = b_data[index];
+
+	if (a_back_part > b_back_part)
+		return 1;
+	if (a_back_part < b_back_part)
+		return -1;
+
 	return 0;
 }
 sbyte whole_number::compare(const whole_number& a, const whole_number& b)
 {
-	const uint64_t a_size = a.bytes.size();
-	const uint64_t b_size = b.bytes.size();
+	const size_t a_size = a.bytes.size();
+	const size_t b_size = b.bytes.size();
 
 	if (a_size < b_size)
 		return -1;
 	if (a_size > b_size)
 		return 1;
 
-	for (int64_t i = a_size - 1; i > -1; i--)
+	if (a_size == 0)
+		return 0;
+
+	for (size_t i = a_size - 1; i != 0; i--)
 	{
 		if (a.bytes[i] > b.bytes[i])
 			return 1;
 		if (a.bytes[i] < b.bytes[i])
 			return -1;
 	}
+
+	if (a.bytes[0] > b.bytes[0])
+		return 1;
+	if (a.bytes[0] < b.bytes[0])
+		return -1;
 
 	return 0;
 }
@@ -162,16 +193,16 @@ void whole_number::add_classic(whole_number& destination, const whole_number& so
 
 	while (counter-- != 0)
 	{
-		const short sum = short(*destination_data + *source_data++ + carry);
-		*destination_data++ = byte(sum & 0xFF);
-		carry = byte(sum >> 8);
+		const short sum = static_cast<short>(*destination_data + *source_data++ + carry);
+		*destination_data++ = static_cast<byte>(sum & 0xFF);
+		carry = static_cast<byte>(sum >> 8);
 	}
 
 	while (addition_iterations-- != 0)
 	{
-		const short sum = short(*destination_data + carry);
-		*destination_data++ = byte(sum & 0xFF);
-		carry = byte(sum >> 8);
+		const short sum = static_cast<short>(*destination_data + carry);
+		*destination_data++ = static_cast<byte>(sum & 0xFF);
+		carry = static_cast<byte>(sum >> 8);
 	}
 
 	if (carry != 0)
@@ -207,7 +238,7 @@ void whole_number::sub_logic_gate(whole_number& destination, const whole_number&
 }
 void whole_number::sub_classic(whole_number& destination, const whole_number& source)
 {
-	for (uint64_t i = 0; i < source.bytes.size(); i++)
+	for (size_t i = 0; i < source.bytes.size(); i++)
 	{
 		if (destination.bytes[i] < source.bytes[i])
 		{
@@ -231,7 +262,7 @@ void whole_number::div(const whole_number& dividend, const whole_number& divisor
 		throw std::invalid_argument("divisor is zero");
 
 	const whole_number _dividend = dividend, _divisor = divisor;
-	const uint64_t k = _dividend.num_bits() + _divisor.num_bits();
+	const size_t k = _dividend.num_bits() + _divisor.num_bits();
 
 	whole_number pow2 = whole_number::one();
 	pow2 <<= k + 1;
@@ -302,12 +333,16 @@ whole_number::whole_number(std::string str) : whole_number()
 
 	if (hex_string.length() % 2) hex_string.insert(0, 1, '0');
 
-	for (int64_t i = (hex_string.length() >> 1) - 1; i > -1; i--)
+	for (size_t i = (hex_string.length() >> 1) - 1; i != 0; i--)
 	{
 		const byte b1 = static_cast<byte>(hex_map.rfind(hex_string[i * 2])) << 4;
 		const byte b2 = static_cast<byte>(hex_map.rfind(hex_string[i * 2 + 1]));
 		bytes.push_back(b1 + b2);
 	}
+
+	const byte b1 = static_cast<byte>(hex_map.rfind(hex_string[0 * 2])) << 4;
+	const byte b2 = static_cast<byte>(hex_map.rfind(hex_string[0 * 2 + 1]));
+	bytes.push_back(b1 + b2);
 }
 whole_number::whole_number(std::vector<byte> bytes) : bytes(std::move(bytes)) { }
 whole_number::whole_number(std::initializer_list<byte> bytes) : bytes(bytes) {}
@@ -348,25 +383,32 @@ whole_number whole_number::two()
 
 std::string whole_number::to_string() const
 {
-	std::string hex_str_view = this->to_string_hex();
-	return hex2dec.convert(hex_str_view.erase(0, 2));
+	const std::string hex_str_view = this->to_string_hex();
+	return hex2dec.convert(hex_str_view);
 }
 std::string whole_number::to_string_hex() const
 {
+	if (this->bytes.empty())
+		return "00";
+
 	const std::string hex_map = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 
 	std::string s(bytes.size() * 2, ' ');
-	for (uint64_t i = 0; i < bytes.size(); ++i) {
+	for (size_t i = 0; i < bytes.size(); ++i) {
 		s[2 * i] = hex_map[(bytes[i] & 0xF0) >> 4];
 		s[2 * i + 1] = hex_map[bytes[i] & 0x0F];
 	}
 
-	std::string result = "0x";
-	for (int64_t i = static_cast<int>(s.length()) - 2; i > -1; i -= 2)
+	std::string result;
+	for (size_t i = static_cast<int64_t>(s.length()) - 2; i != 0; i -= 2)
 	{
 		result.push_back(s[i]);
 		result.push_back(s[i + 1]);
 	}
+
+	result.push_back(s[0]);
+	result.push_back(s[0 + 1]);
+
 	return result;
 }
 uint64_t numbers::whole_number::to_uint64_t() const
@@ -387,10 +429,10 @@ std::vector<byte> numbers::whole_number::to_bytes() const
 
 whole_number whole_number::and (const whole_number& number) const
 {
-	const uint64_t result_size = std::min(this->bytes.size(), number.bytes.size());
+	const size_t result_size = std::min(this->bytes.size(), number.bytes.size());
 	std::vector<byte> result_bytes(result_size);
 
-	for (int i = 0; i < result_size; i++)
+	for (size_t i = 0; i < result_size; i++)
 		result_bytes[i] = number.bytes[i] & this->bytes[i];
 
 	whole_number::clear_zero_bytes(result_bytes);
@@ -404,10 +446,10 @@ whole_number whole_number::or (const whole_number& number) const
 	auto& greater_number_bytes = this->bytes.size() > number.bytes.size() ? this->bytes : number.bytes;
 	std::vector<byte> result_bytes(calculated_part_size + filled_part_size);
 
-	for (int i = 0; i < calculated_part_size; i++)
+	for (size_t i = 0; i < calculated_part_size; i++)
 		result_bytes[i] = number.bytes[i] | this->bytes[i];
 
-	for (uint64_t i = calculated_part_size; i < filled_part_size + calculated_part_size; i++)
+	for (size_t i = calculated_part_size; i < filled_part_size + calculated_part_size; i++)
 		result_bytes[i] = greater_number_bytes[i];
 
 	whole_number::clear_zero_bytes(result_bytes);
@@ -421,10 +463,10 @@ whole_number whole_number::xor (const whole_number& number) const
 	auto& greater_number_bytes = this->bytes.size() > number.bytes.size() ? this->bytes : number.bytes;
 	std::vector<byte> result_bytes(calculated_part_size + filled_part_size);
 
-	for (int i = 0; i < calculated_part_size; i++)
+	for (size_t i = 0; i < calculated_part_size; i++)
 		result_bytes[i] = number.bytes[i] ^ this->bytes[i];
 
-	for (uint64_t i = calculated_part_size; i < filled_part_size + calculated_part_size; i++)
+	for (size_t i = calculated_part_size; i < filled_part_size + calculated_part_size; i++)
 		result_bytes[i] = greater_number_bytes[i];
 
 	whole_number::clear_zero_bytes(result_bytes);
@@ -435,19 +477,19 @@ whole_number whole_number::not() const
 {
 	std::vector<byte> result_bytes(this->bytes.size());
 
-	for (uint64_t i = 0; i < this->bytes.size(); i++)
+	for (size_t i = 0; i < this->bytes.size(); i++)
 		result_bytes[i] = ~this->bytes[i];
 
 	return result_bytes;
 }
 
-void whole_number::shr(const uint64_t shift_count)
+void whole_number::shr(const size_t shift_count)
 {
 	if (this->is_zero())
 		return;
 
 	byte* data = nullptr;
-	int64_t i = 0;
+	size_t i = 0;
 	auto counter = shift_count;
 
 	// for (auto [i, f, s] = std::tuple{...};;)
@@ -467,12 +509,12 @@ void whole_number::shr(const uint64_t shift_count)
 
 	whole_number::clear_zero_bytes(this->bytes);
 }
-void whole_number::shl(const uint64_t shift_count)
+void whole_number::shl(const size_t shift_count)
 {
 	// if this is zero => return;
 
 	const byte eight = 0x8; // 8 bits in 1 byte
-	const auto byte_shift_count = shift_count / eight;
+	const size_t byte_shift_count = shift_count / eight;
 	this->bytes.insert(this->bytes.begin(), byte_shift_count, 0); // insert empty bytes in begin of vector
 	
 	auto counter = shift_count - byte_shift_count * eight;
@@ -525,11 +567,11 @@ void whole_number::mul(const whole_number& number)
 {
 	struct fft
 	{
-		__declspec(noinline) static uint64_t calculate_expr_value(const std::vector<byte>& a, const std::vector<byte>& b, 
-			const uint64_t left, const uint64_t right)
+		__declspec(noinline) static uint64_t calculate_expr_value(const std::vector<byte>& a, const std::vector<byte>& b,
+			const size_t left, const size_t right)
 		{
 			uint64_t sum = 0;
-			uint64_t loc_left = left - 1, loc_right = right + 1;
+			size_t loc_left = left - 1, loc_right = right + 1;
 
 			while (++loc_left < --loc_right)
 			{
@@ -553,12 +595,12 @@ void whole_number::mul(const whole_number& number)
 	std::vector<byte> mul_vector_a(this->bytes);
 	std::vector<byte> mul_vector_b(number.bytes);
 
-	const int64_t total_multipliers_size = std::max(this->bytes.size(), number.bytes.size());
+	const size_t total_multipliers_size = std::max(this->bytes.size(), number.bytes.size());
 
 	mul_vector_a.resize(total_multipliers_size);
 	mul_vector_b.resize(total_multipliers_size);
 
-	const uint64_t _left = 0, _right = total_multipliers_size - 1;
+	const size_t _left = 0, _right = total_multipliers_size - 1;
 	const uint16_t first_expr_value = mul_vector_a[_left] * mul_vector_b[_left];
 	const uint16_t last_expr_value = mul_vector_a[_right] * mul_vector_b[_right];
 
@@ -583,9 +625,9 @@ void whole_number::mul(const whole_number& number)
 	std::vector<std::pair<byte, uint64_t>> fft_calculations; fft_calculations.resize(total_multipliers_size * 2 - 1);
 	fft_calculations[0] = std::pair<byte, uint64_t> (static_cast<byte>(first_expr_value), first_expr_value >> 8);
 
-	uint64_t current_fft_calc_index = 1; // because first is inserted
+	size_t current_fft_calc_index = 1; // because first is inserted
 
-	for(uint64_t i = 1; i < _right; i++)
+	for(size_t i = 1; i < _right; i++)
 	{
 		uint64_t value = fft::calculate_expr_value(mul_vector_a, mul_vector_b, _left, i);
 		value += fft_calculations[current_fft_calc_index - 1].second;
@@ -596,7 +638,7 @@ void whole_number::mul(const whole_number& number)
 	middle_expr_value += fft_calculations[current_fft_calc_index - 1].second;
 	fft_calculations[current_fft_calc_index++] = std::pair<byte, uint64_t>(static_cast<byte>(middle_expr_value), middle_expr_value >> 8);
 
-	for (uint64_t i = 1; i < _right; i++)
+	for (size_t i = 1; i < _right; i++)
 	{
 		uint64_t value = fft::calculate_expr_value(mul_vector_a, mul_vector_b, i, _right);
 		value += fft_calculations[current_fft_calc_index - 1].second;
@@ -630,14 +672,15 @@ void numbers::whole_number::fast_mul(const whole_number& number)
 	struct fft_fast
 	{
 		__declspec(noinline) static uint64_t calculate_expr_value_fast(const std::vector<byte>& greater, const std::vector<byte>& lower,
-			uint64_t left, uint64_t right)
+			size_t left, size_t right)
 		{
 			if (lower.size() <= left)
 				return 0;
 
-			uint64_t sum = 0u, tmp_left = left, tmp_right = right;
-			uint64_t free_pairs_count = lower.size() == 1 ? 
-				2 : lower.size() > right ? (1u + (lower.size() == right)) : lower.size() == right ? 2
+			uint64_t sum = 0u;
+			size_t tmp_left = left, tmp_right = right;
+			size_t free_pairs_count = lower.size() == 1 ?
+				2 : lower.size() > right ? (1ull + (lower.size() == right)) : lower.size() == right ? 2
 				: (lower.size() - left + (lower.size() >= right ? -static_cast<int64_t>(lower.size() - right) : 1));
 
 			while(--free_pairs_count != 0)
@@ -678,9 +721,9 @@ void numbers::whole_number::fast_mul(const whole_number& number)
 	if (mul_vector_a.size() < mul_vector_b.size())
 		mul_vector_a.swap(mul_vector_b);
 
-	const int64_t total_multipliers_size = std::max(this->bytes.size(), number.bytes.size());
+	const size_t total_multipliers_size = std::max(this->bytes.size(), number.bytes.size());
 
-	const uint64_t _left = 0, _right = total_multipliers_size - 1;
+	const size_t _left = 0, _right = total_multipliers_size - 1;
 	const uint16_t first_expr_value = mul_vector_a[_left] * mul_vector_b[_left];
 
 	if (total_multipliers_size == 1)
@@ -702,9 +745,9 @@ void numbers::whole_number::fast_mul(const whole_number& number)
 	std::vector<std::pair<byte, uint64_t>> fft_calculations; fft_calculations.resize(total_multipliers_size * 2 - 1);
 	fft_calculations[0] = std::pair<byte, uint64_t>(static_cast<byte>(first_expr_value), first_expr_value >> 8);
 
-	uint64_t current_fft_calc_index = 1; // because first is inserted
+	size_t current_fft_calc_index = 1; // because first is inserted
 
-	for (uint64_t i = 1; i <= _right; i++)
+	for (size_t i = 1; i <= _right; i++)
 	{
 		uint64_t value = fft_fast::calculate_expr_value_fast(mul_vector_a, mul_vector_b, _left, i);
 		value += fft_calculations[current_fft_calc_index - 1].second;
@@ -712,7 +755,7 @@ void numbers::whole_number::fast_mul(const whole_number& number)
 		fft_calculations[current_fft_calc_index++] = std::pair<byte, uint64_t>(static_cast<byte>(value), value >> 8);
 	}
 
-	for (uint64_t i = 1; i <= _right; i++)
+	for (size_t i = 1; i <= _right; i++)
 	{
 		uint64_t value = fft_fast::calculate_expr_value_fast(mul_vector_a, mul_vector_b, i, _right);
 		value += fft_calculations[current_fft_calc_index - 1].second;
@@ -782,10 +825,10 @@ bool whole_number::is_power_of_two() const
 	return (*this & this_minus_one).is_zero();
 }
 
-uint64_t whole_number::num_bits() const
+size_t whole_number::num_bits() const
 {
 	// in one byte eight bits :)
-	return this->bytes.size() * 8;
+	return this->bytes.size() << 3; // * 8
 }
 bool whole_number::is_odd() const
 {
@@ -869,26 +912,33 @@ whole_number whole_number::operator / (const whole_number& number) const
 {
 	return this->division(number);
 }
+whole_number whole_number::operator%(const whole_number& number) const
+{
+	whole_number q, r;
+	whole_number::div(*this, number, q, r);
 
-whole_number whole_number::operator << (const uint64_t shift_count) const
+	return r;
+}
+
+whole_number whole_number::operator << (const size_t shift_count) const
 {
 	whole_number copy = *this;
 	copy.shl(shift_count);
 
 	return copy;
 }
-void whole_number::operator <<= (const uint64_t shift_count) 
+void whole_number::operator <<= (const size_t shift_count)
 {
 	this->shl(shift_count);
 }
-whole_number whole_number::operator >> (const uint64_t shift_count) const
+whole_number whole_number::operator >> (const size_t shift_count) const
 {
 	whole_number copy = *this;
 	copy.shr(shift_count);
 
 	return copy;
 }
-void whole_number::operator >>= (const uint64_t shift_count)
+void whole_number::operator >>= (const size_t shift_count)
 {
 	this->shr(shift_count);
 }
@@ -1019,6 +1069,44 @@ whole_number whole_number::log2() const
 	}
 
 	return log;
+}
+
+whole_number whole_number::extensions::max(const whole_number& a, const whole_number& b)
+{
+	const sbyte compare_result = whole_number::compare(a, b);
+
+	if (compare_result == 1)
+		return a;
+		
+	return b;
+}
+whole_number whole_number::extensions::min(const whole_number& a, const whole_number& b)
+{
+	const sbyte compare_result = whole_number::compare(a, b);
+
+	if (compare_result == -1)
+		return a;
+
+	return b;
+}
+whole_number whole_number::extensions::gcd(const whole_number& a, const whole_number& b)
+{
+	whole_number tmp_a = a, tmp_b = b;
+
+	while( tmp_b.is_not_zero() )
+	{
+		whole_number rem, q;
+		whole_number::div(tmp_a, tmp_b, q, rem);
+
+		tmp_a = tmp_b;
+		tmp_b = rem;
+	}
+
+	return tmp_a;
+}
+whole_number whole_number::extensions::lcm(const whole_number& a, const whole_number& b)
+{
+	return (a * b / whole_number::extensions::gcd(a, b));
 }
 
 #endif
