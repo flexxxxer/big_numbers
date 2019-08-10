@@ -4,8 +4,8 @@
 #include <string> // use std::string
 #include <algorithm> // use std::transform
 #include <tuple> // std::tuple
-#include <sstream> // std::string stream
 #include <vector> // std::vector
+#include <random> // use for random
 
 #include "../include/whole_number.h" // use numbers::whole_number
 
@@ -1089,6 +1089,7 @@ whole_number whole_number::extensions::min(const whole_number& a, const whole_nu
 
 	return b;
 }
+
 whole_number whole_number::extensions::gcd(const whole_number& a, const whole_number& b)
 {
 	whole_number tmp_a = a, tmp_b = b;
@@ -1107,6 +1108,28 @@ whole_number whole_number::extensions::gcd(const whole_number& a, const whole_nu
 whole_number whole_number::extensions::lcm(const whole_number& a, const whole_number& b)
 {
 	return (a * b / whole_number::extensions::gcd(a, b));
+}
+
+whole_number whole_number::extensions::random(uint32_t max_byte_count)
+{
+	if (max_byte_count == 0)
+		return whole_number::zero();
+
+	std::mt19937 rnd(std::random_device().operator()());
+	const std::uniform_int_distribution<std::mt19937::result_type> rand_size(0, max_byte_count);
+
+	const uint32_t size = rand_size(rnd);
+	if (size == 0) return whole_number::zero();
+
+	std::vector<byte> random_bytes(size);
+	const std::uniform_int_distribution<std::mt19937::result_type> rand_byte(0, 255);
+
+	for (size_t i = 0; i < size; i++)
+		random_bytes[i] = static_cast<byte>(rand_byte(rnd));
+
+	whole_number::clear_zero_bytes(random_bytes);
+
+	return random_bytes;
 }
 
 #endif

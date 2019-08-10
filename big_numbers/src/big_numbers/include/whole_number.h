@@ -62,8 +62,11 @@ namespace numbers
 		public:
 			static whole_number max(const whole_number& a, const whole_number& b);
 			static whole_number min(const whole_number& a, const whole_number& b);
+
 			static whole_number gcd(const whole_number& a, const whole_number& b);
 			static whole_number lcm(const whole_number& a, const whole_number& b);
+
+			static whole_number random(uint32_t max_byte_count = 1000u);
 		};
 
 		whole_number();
