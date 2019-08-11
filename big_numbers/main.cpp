@@ -83,7 +83,11 @@ void perform_tests()
 
 int main()
 {
-	perform_tests();
+	// perform_tests();
+
+	whole_number a = 4096ull;
+	a = a.pow(a);
+	cout << a.is_power_of_two() << endl;
 
 	return 0;
 }

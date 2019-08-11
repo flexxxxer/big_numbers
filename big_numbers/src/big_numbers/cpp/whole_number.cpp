@@ -19,10 +19,11 @@ std::vector<byte> whole_number::uint_to_bytes(const uint32_t number)
 	if (number == 0)
 		return std::vector<byte>();
 
-	std::vector<byte> bts(4); // reserve 4 bytes
+	constexpr uint32_t int_byte_size = sizeof(int32_t); // is 4
+	std::vector<byte> bts(int_byte_size); // reserve 4 bytes
 
-	for (uint32_t i = 0; i < 4; i++)
-		bts[3 - i] = (number >> (i * 8));
+	for (uint32_t i = 0; i < int_byte_size; i++)
+		bts[3 - i] = number >> (i * 8);
 
 	std::reverse(bts.begin(), bts.end());
 
@@ -36,10 +37,11 @@ std::vector<byte> whole_number::ulong_to_bytes(const uint64_t number)
 	if (number == 0)
 		return std::vector<byte>();
 
-	std::vector<byte> bts(8); // reserve 4 bytes
+	constexpr uint32_t int64_byte_size = sizeof(int64_t); // is 8
+	std::vector<byte> bts(int64_byte_size); // reserve 4 bytes
 
-	for (uint32_t i = 0; i < 8; i++)
-		bts[7 - i] = static_cast<byte>(number >> (i * 8)) & 0XFFFFFFFF;
+	for (uint32_t i = 0; i < int64_byte_size; i++)
+		bts[7 - i] = static_cast<byte>(number >> (i * 8)) & 0xFFFFFFFF;
 
 	std::reverse(bts.begin(), bts.end());
 
@@ -109,16 +111,16 @@ sbyte whole_number::compare_optimized(const whole_number& a, const whole_number&
 			return -1;
 	}
 
-	const int64_t& a_front_part = a_data[index + 8];
-	const int64_t& b_front_part = b_data[index + 8];
+	const int64_t& a_front_part = a_data[0 + 8];
+	const int64_t& b_front_part = b_data[0 + 8];
 
 	if (a_front_part > b_front_part)
 		return 1;
 	if (a_front_part < b_front_part)
 		return -1;
 
-	const int64_t& a_back_part = a_data[index];
-	const int64_t& b_back_part = b_data[index];
+	const int64_t& a_back_part = a_data[0];
+	const int64_t& b_back_part = b_data[0];
 
 	if (a_back_part > b_back_part)
 		return 1;
@@ -158,7 +160,7 @@ sbyte whole_number::compare(const whole_number& a, const whole_number& b)
 
 void whole_number::add_logic_gate(whole_number& destination, const whole_number& source)
 {
-	whole_number carry_value = source;
+	whole_number carry_value = source;  // NOLINT(performance-unnecessary-copy-initialization)
 
 	// Iterate till there is no carry
 	while (carry_value.is_not_zero())
@@ -214,7 +216,7 @@ void whole_number::sub_logic_gate(whole_number& destination, const whole_number&
 	if (destination.bytes.size() < source.bytes.size())
 		throw std::invalid_argument("source");
 
-	auto borrow_value = source;
+	whole_number borrow_value = source;
 
 	// Iterate till there is no carry
 	while (borrow_value.is_not_zero())
@@ -345,7 +347,12 @@ whole_number::whole_number(std::string str) : whole_number()
 	bytes.push_back(b1 + b2);
 }
 whole_number::whole_number(std::vector<byte> bytes) : bytes(std::move(bytes)) { }
-whole_number::whole_number(std::initializer_list<byte> bytes) : bytes(bytes) {}
+whole_number::whole_number(std::initializer_list<byte> bytes) : whole_number()
+{
+	std::vector<byte> bts = bytes;
+	whole_number::clear_zero_bytes(bts);
+	this->bytes = bts;
+}
 
 whole_number::whole_number(const uint32_t number) : whole_number()
 {
@@ -511,7 +518,8 @@ void whole_number::shr(const size_t shift_count)
 }
 void whole_number::shl(const size_t shift_count)
 {
-	// if this is zero => return;
+	if (this->is_zero())
+		return;
 
 	const byte eight = 0x8; // 8 bits in 1 byte
 	const size_t byte_shift_count = shift_count / eight;
@@ -912,7 +920,7 @@ whole_number whole_number::operator / (const whole_number& number) const
 {
 	return this->division(number);
 }
-whole_number whole_number::operator%(const whole_number& number) const
+whole_number whole_number::operator % (const whole_number& number) const
 {
 	whole_number q, r;
 	whole_number::div(*this, number, q, r);
@@ -1003,20 +1011,6 @@ whole_number whole_number::factorial() const
 
 			return factorial::prod_tree(l, m) * factorial::prod_tree(m_plus_one, r);
 		}
-
-		static whole_number prod_tree_uint64t(const uint64_t l, const uint64_t r)
-		{
-			if (l > r)
-				return whole_number::one();
-			if (l == r)
-				return l;
-			if (r - l == 1)
-				return static_cast<whole_number>(l) * r;
-
-			const uint64_t m = (l + r) >> 1;
-
-			return prod_tree_uint64t(l, m) * prod_tree_uint64t(m + 1, r);
-		}
 	};
 
 	if (this->is_zero())
@@ -1024,9 +1018,6 @@ whole_number whole_number::factorial() const
 
 	if (this->is_one() || this->is_two())
 		return *this;
-
-	if (this->bytes.size() <= 7) 
-		return factorial::prod_tree_uint64t(2u, this->to_uint64_t());
 
 	return factorial::prod_tree(whole_number::two(), *this);
 }
@@ -1070,6 +1061,8 @@ whole_number whole_number::log2() const
 
 	return log;
 }
+
+whole_number::extensions::extensions() = default;
 
 whole_number whole_number::extensions::max(const whole_number& a, const whole_number& b)
 {

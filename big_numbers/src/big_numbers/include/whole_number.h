@@ -23,7 +23,7 @@ namespace numbers
 	// is a large positive integer
 	// представляет собой большое положительное целое число
 	// reprezentuje dużą dodatnią liczbę całkowitą
-	class whole_number
+	class whole_number   // NOLINT(cppcoreguidelines-special-member-functions, hicpp-special-member-functions)
 	{
 		// this is the set of bytes that make up the number
 		// это набор байт, из которого состоит число
@@ -58,7 +58,7 @@ namespace numbers
 
 		class extensions
 		{
-			extensions() = default;
+			extensions();
 		public:
 			static whole_number max(const whole_number& a, const whole_number& b);
 			static whole_number min(const whole_number& a, const whole_number& b);
