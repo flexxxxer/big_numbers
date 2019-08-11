@@ -20,7 +20,7 @@ std::vector<byte> whole_number::uint_to_bytes(const uint32_t number)
 		return std::vector<byte>();
 
 	constexpr uint32_t int_byte_size = sizeof(int32_t); // is 4
-	std::vector<byte> bts(int_byte_size); // reserve 4 bytes
+	std::vector<byte> bts(int_byte_size); // reserve 4 bytes_
 
 	for (uint32_t i = 0; i < int_byte_size; i++)
 		bts[3 - i] = number >> (i * 8);
@@ -38,7 +38,7 @@ std::vector<byte> whole_number::ulong_to_bytes(const uint64_t number)
 		return std::vector<byte>();
 
 	constexpr uint32_t int64_byte_size = sizeof(int64_t); // is 8
-	std::vector<byte> bts(int64_byte_size); // reserve 4 bytes
+	std::vector<byte> bts(int64_byte_size); // reserve 4 bytes_
 
 	for (uint32_t i = 0; i < int64_byte_size; i++)
 		bts[7 - i] = static_cast<byte>(number >> (i * 8)) & 0xFFFFFFFF;
@@ -63,28 +63,28 @@ void whole_number::clear_zero_bytes(std::vector<byte>& bytes)
 }
 void whole_number::clear_zero_bytes(whole_number& number)
 {
-	whole_number::clear_zero_bytes(number.bytes);
+	whole_number::clear_zero_bytes(number.bytes_);
 }
 
 sbyte whole_number::compare_optimized(const whole_number& a, const whole_number& b)
 {
-	if (a.bytes.size() > b.bytes.size())
+	if (a.bytes_.size() > b.bytes_.size())
 		return 1;
-	if (a.bytes.size() < b.bytes.size())
+	if (a.bytes_.size() < b.bytes_.size())
 		return -1;
 
-	if (a.bytes.empty())
+	if (a.bytes_.empty())
 		return 0;
 
-	const byte* a_data = a.bytes.data();
-	const byte* b_data = b.bytes.data();
-	size_t index = a.bytes.size() - 1;
+	const byte* a_data = a.bytes_.data();
+	const byte* b_data = b.bytes_.data();
+	size_t index = a.bytes_.size() - 1;
 
 	for (; index % 16 != 0; index--)
 	{
-		if (a.bytes[index] > b.bytes[index])
+		if (a.bytes_[index] > b.bytes_[index])
 			return 1;
-		if (a.bytes[index] < b.bytes[index])
+		if (a.bytes_[index] < b.bytes_[index])
 			return -1;
 	}
 
@@ -131,8 +131,8 @@ sbyte whole_number::compare_optimized(const whole_number& a, const whole_number&
 }
 sbyte whole_number::compare(const whole_number& a, const whole_number& b)
 {
-	const size_t a_size = a.bytes.size();
-	const size_t b_size = b.bytes.size();
+	const size_t a_size = a.bytes_.size();
+	const size_t b_size = b.bytes_.size();
 
 	if (a_size < b_size)
 		return -1;
@@ -144,15 +144,15 @@ sbyte whole_number::compare(const whole_number& a, const whole_number& b)
 
 	for (size_t i = a_size - 1; i != 0; i--)
 	{
-		if (a.bytes[i] > b.bytes[i])
+		if (a.bytes_[i] > b.bytes_[i])
 			return 1;
-		if (a.bytes[i] < b.bytes[i])
+		if (a.bytes_[i] < b.bytes_[i])
 			return -1;
 	}
 
-	if (a.bytes[0] > b.bytes[0])
+	if (a.bytes_[0] > b.bytes_[0])
 		return 1;
-	if (a.bytes[0] < b.bytes[0])
+	if (a.bytes_[0] < b.bytes_[0])
 		return -1;
 
 	return 0;
@@ -182,16 +182,16 @@ void whole_number::add_logic_gate(whole_number& destination, const whole_number&
 }
 void whole_number::add_classic(whole_number& destination, const whole_number& source)
 {
-	if (destination.bytes.size() < source.bytes.size())
-		destination.bytes.resize(source.bytes.size());
+	if (destination.bytes_.size() < source.bytes_.size())
+		destination.bytes_.resize(source.bytes_.size());
 
 	byte carry = 0;
 
-	auto destination_data = &destination.bytes.front();
-	auto source_data = &source.bytes.front();
+	auto destination_data = &destination.bytes_.front();
+	auto source_data = &source.bytes_.front();
 
-	auto counter = source.bytes.size();
-	auto addition_iterations = destination.bytes.size() - counter;
+	auto counter = source.bytes_.size();
+	auto addition_iterations = destination.bytes_.size() - counter;
 
 	while (counter-- != 0)
 	{
@@ -208,12 +208,12 @@ void whole_number::add_classic(whole_number& destination, const whole_number& so
 	}
 
 	if (carry != 0)
-		destination.bytes.push_back(carry);
+		destination.bytes_.push_back(carry);
 }
 
 void whole_number::sub_logic_gate(whole_number& destination, const whole_number& source)
 {
-	if (destination.bytes.size() < source.bytes.size())
+	if (destination.bytes_.size() < source.bytes_.size())
 		throw std::invalid_argument("source");
 
 	whole_number borrow_value = source;
@@ -240,11 +240,11 @@ void whole_number::sub_logic_gate(whole_number& destination, const whole_number&
 }
 void whole_number::sub_classic(whole_number& destination, const whole_number& source)
 {
-	for (size_t i = 0; i < source.bytes.size(); i++)
+	for (size_t i = 0; i < source.bytes_.size(); i++)
 	{
-		if (destination.bytes[i] < source.bytes[i])
+		if (destination.bytes_[i] < source.bytes_[i])
 		{
-			auto data = destination.bytes.begin() + i;
+			auto data = destination.bytes_.begin() + i;
 
 			while (*++data == 0)
 				*data = 0xFF;
@@ -252,7 +252,7 @@ void whole_number::sub_classic(whole_number& destination, const whole_number& so
 			*data -= 1;
 		}
 
-		destination.bytes[i] -= source.bytes[i];
+		destination.bytes_[i] -= source.bytes_[i];
 	}
 
 	whole_number::clear_zero_bytes(destination);
@@ -339,19 +339,19 @@ whole_number::whole_number(std::string str) : whole_number()
 	{
 		const byte b1 = static_cast<byte>(hex_map.rfind(hex_string[i * 2])) << 4;
 		const byte b2 = static_cast<byte>(hex_map.rfind(hex_string[i * 2 + 1]));
-		bytes.push_back(b1 + b2);
+		bytes_.push_back(b1 + b2);
 	}
 
 	const byte b1 = static_cast<byte>(hex_map.rfind(hex_string[0 * 2])) << 4;
 	const byte b2 = static_cast<byte>(hex_map.rfind(hex_string[0 * 2 + 1]));
-	bytes.push_back(b1 + b2);
+	bytes_.push_back(b1 + b2);
 }
-whole_number::whole_number(std::vector<byte> bytes) : bytes(std::move(bytes)) { }
+whole_number::whole_number(std::vector<byte> bytes) : bytes_(std::move(bytes)) { }
 whole_number::whole_number(std::initializer_list<byte> bytes) : whole_number()
 {
 	std::vector<byte> bts = bytes;
 	whole_number::clear_zero_bytes(bts);
-	this->bytes = bts;
+	this->bytes_ = bts;
 }
 
 whole_number::whole_number(const uint32_t number) : whole_number()
@@ -359,18 +359,18 @@ whole_number::whole_number(const uint32_t number) : whole_number()
 	if (number == 0)
 		return;
 
-	this->bytes = whole_number::uint_to_bytes(number);
+	this->bytes_ = whole_number::uint_to_bytes(number);
 }
 whole_number::whole_number(const uint64_t number) : whole_number()
 {
 	if (number == 0)
 		return;
 
-	this->bytes = whole_number::ulong_to_bytes(number);
+	this->bytes_ = whole_number::ulong_to_bytes(number);
 }
 whole_number::~whole_number()
 {
-	this->bytes.~vector();
+	this->bytes_.~vector();
 }
 
 whole_number whole_number::zero()
@@ -395,15 +395,15 @@ std::string whole_number::to_string() const
 }
 std::string whole_number::to_string_hex() const
 {
-	if (this->bytes.empty())
+	if (this->bytes_.empty())
 		return "00";
 
 	const std::string hex_map = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 
-	std::string s(bytes.size() * 2, ' ');
-	for (size_t i = 0; i < bytes.size(); ++i) {
-		s[2 * i] = hex_map[(bytes[i] & 0xF0) >> 4];
-		s[2 * i + 1] = hex_map[bytes[i] & 0x0F];
+	std::string s(bytes_.size() * 2, ' ');
+	for (size_t i = 0; i < bytes_.size(); ++i) {
+		s[2 * i] = hex_map[(bytes_[i] & 0xF0) >> 4];
+		s[2 * i + 1] = hex_map[bytes_[i] & 0x0F];
 	}
 
 	std::string result;
@@ -420,27 +420,27 @@ std::string whole_number::to_string_hex() const
 }
 uint64_t numbers::whole_number::to_uint64_t() const
 {
-	if (this->bytes.size() > 8)
+	if (this->bytes_.size() > 8)
 		throw std::exception("is very big for uint64_t");
-	if (bytes.empty())
+	if (bytes_.empty())
 		return 0u;
 
-	std::vector<byte> bts = this->bytes; bts.resize(8);
+	std::vector<byte> bts = this->bytes_; bts.resize(8);
 	uint64_t* dt = reinterpret_cast<uint64_t*>(bts.data());
 	return *dt;
 }
 std::vector<byte> numbers::whole_number::to_bytes() const
 {
-	return this->bytes;
+	return this->bytes_;
 }
 
 whole_number whole_number::and (const whole_number& number) const
 {
-	const size_t result_size = std::min(this->bytes.size(), number.bytes.size());
+	const size_t result_size = std::min(this->bytes_.size(), number.bytes_.size());
 	std::vector<byte> result_bytes(result_size);
 
 	for (size_t i = 0; i < result_size; i++)
-		result_bytes[i] = number.bytes[i] & this->bytes[i];
+		result_bytes[i] = number.bytes_[i] & this->bytes_[i];
 
 	whole_number::clear_zero_bytes(result_bytes);
 
@@ -448,13 +448,13 @@ whole_number whole_number::and (const whole_number& number) const
 }
 whole_number whole_number::or (const whole_number& number) const
 {
-	const size_t calculated_part_size = std::min(this->bytes.size(), number.bytes.size());
-	const size_t filled_part_size = std::max(this->bytes.size(), number.bytes.size()) - calculated_part_size;
-	auto& greater_number_bytes = this->bytes.size() > number.bytes.size() ? this->bytes : number.bytes;
+	const size_t calculated_part_size = std::min(this->bytes_.size(), number.bytes_.size());
+	const size_t filled_part_size = std::max(this->bytes_.size(), number.bytes_.size()) - calculated_part_size;
+	auto& greater_number_bytes = this->bytes_.size() > number.bytes_.size() ? this->bytes_ : number.bytes_;
 	std::vector<byte> result_bytes(calculated_part_size + filled_part_size);
 
 	for (size_t i = 0; i < calculated_part_size; i++)
-		result_bytes[i] = number.bytes[i] | this->bytes[i];
+		result_bytes[i] = number.bytes_[i] | this->bytes_[i];
 
 	for (size_t i = calculated_part_size; i < filled_part_size + calculated_part_size; i++)
 		result_bytes[i] = greater_number_bytes[i];
@@ -465,13 +465,13 @@ whole_number whole_number::or (const whole_number& number) const
 }
 whole_number whole_number::xor (const whole_number& number) const
 {
-	const size_t calculated_part_size = std::min(this->bytes.size(), number.bytes.size());
-	const size_t filled_part_size = std::max(this->bytes.size(), number.bytes.size()) - calculated_part_size;
-	auto& greater_number_bytes = this->bytes.size() > number.bytes.size() ? this->bytes : number.bytes;
+	const size_t calculated_part_size = std::min(this->bytes_.size(), number.bytes_.size());
+	const size_t filled_part_size = std::max(this->bytes_.size(), number.bytes_.size()) - calculated_part_size;
+	auto& greater_number_bytes = this->bytes_.size() > number.bytes_.size() ? this->bytes_ : number.bytes_;
 	std::vector<byte> result_bytes(calculated_part_size + filled_part_size);
 
 	for (size_t i = 0; i < calculated_part_size; i++)
-		result_bytes[i] = number.bytes[i] ^ this->bytes[i];
+		result_bytes[i] = number.bytes_[i] ^ this->bytes_[i];
 
 	for (size_t i = calculated_part_size; i < filled_part_size + calculated_part_size; i++)
 		result_bytes[i] = greater_number_bytes[i];
@@ -482,10 +482,10 @@ whole_number whole_number::xor (const whole_number& number) const
 }
 whole_number whole_number::not() const
 {
-	std::vector<byte> result_bytes(this->bytes.size());
+	std::vector<byte> result_bytes(this->bytes_.size());
 
-	for (size_t i = 0; i < this->bytes.size(); i++)
-		result_bytes[i] = ~this->bytes[i];
+	for (size_t i = 0; i < this->bytes_.size(); i++)
+		result_bytes[i] = ~this->bytes_[i];
 
 	return result_bytes;
 }
@@ -500,7 +500,7 @@ void whole_number::shr(const size_t shift_count)
 	auto counter = shift_count;
 
 	// for (auto [i, f, s] = std::tuple{...};;)
-	while (data = &this->bytes.front(), i = this->bytes.size(), counter-- != 0)
+	while (data = &this->bytes_.front(), i = this->bytes_.size(), counter-- != 0)
 	{
 		*data >>= 1;
 		while (data++, --i != 0)
@@ -514,7 +514,7 @@ void whole_number::shr(const size_t shift_count)
 		}
 	}
 
-	whole_number::clear_zero_bytes(this->bytes);
+	whole_number::clear_zero_bytes(this->bytes_);
 }
 void whole_number::shl(const size_t shift_count)
 {
@@ -523,15 +523,15 @@ void whole_number::shl(const size_t shift_count)
 
 	const byte eight = 0x8; // 8 bits in 1 byte
 	const size_t byte_shift_count = shift_count / eight;
-	this->bytes.insert(this->bytes.begin(), byte_shift_count, 0); // insert empty bytes in begin of vector
+	this->bytes_.insert(this->bytes_.begin(), byte_shift_count, 0); // insert empty bytes_ in begin of vector
 	
 	auto counter = shift_count - byte_shift_count * eight;
 	if (counter == 0) return; // why shift if you can not shift
 
-	this->bytes.push_back(0); // insert last byte for shifting bits
+	this->bytes_.push_back(0); // insert last byte for shifting bits
 	byte* data = nullptr;
 	uint64_t i = 0;
-	while (i = this->bytes.size() - byte_shift_count - 1, data = &(this->bytes.back()) - 1, counter-- != 0)
+	while (i = this->bytes_.size() - byte_shift_count - 1, data = &(this->bytes_.back()) - 1, counter-- != 0)
 	{
 		*(data + 1) <<= 1;
 		*(data + 1) ^= *data >> 7;
@@ -544,7 +544,7 @@ void whole_number::shl(const size_t shift_count)
 		}
 	}
 
-	whole_number::clear_zero_bytes(this->bytes);
+	whole_number::clear_zero_bytes(this->bytes_);
 }
 
 void whole_number::add(const whole_number& number)
@@ -596,14 +596,14 @@ void whole_number::mul(const whole_number& number)
 
 	if (this->is_zero() || number.is_zero())
 	{
-		this->bytes.clear(); // set zero
+		this->bytes_.clear(); // set zero
 		return;;
 	}
 
-	std::vector<byte> mul_vector_a(this->bytes);
-	std::vector<byte> mul_vector_b(number.bytes);
+	std::vector<byte> mul_vector_a(this->bytes_);
+	std::vector<byte> mul_vector_b(number.bytes_);
 
-	const size_t total_multipliers_size = std::max(this->bytes.size(), number.bytes.size());
+	const size_t total_multipliers_size = std::max(this->bytes_.size(), number.bytes_.size());
 
 	mul_vector_a.resize(total_multipliers_size);
 	mul_vector_b.resize(total_multipliers_size);
@@ -623,7 +623,7 @@ void whole_number::mul(const whole_number& number)
 		if (result[1] == 0)
 			result.pop_back();
 
-		this->bytes = result;
+		this->bytes_ = result;
 
 		return;
 	}
@@ -673,7 +673,7 @@ void whole_number::mul(const whole_number& number)
 
 	whole_number::clear_zero_bytes(result_mul_vector);
 
-	this->bytes = result_mul_vector;
+	this->bytes_ = result_mul_vector;
 }
 void numbers::whole_number::fast_mul(const whole_number& number)
 {
@@ -719,17 +719,17 @@ void numbers::whole_number::fast_mul(const whole_number& number)
 
 	if (this->is_zero() || number.is_zero())
 	{
-		this->bytes.clear(); // set zero
+		this->bytes_.clear(); // set zero
 		return;;
 	}
 
-	std::vector<byte> mul_vector_a(this->bytes);
-	std::vector<byte> mul_vector_b(number.bytes);
+	std::vector<byte> mul_vector_a(this->bytes_);
+	std::vector<byte> mul_vector_b(number.bytes_);
 
 	if (mul_vector_a.size() < mul_vector_b.size())
 		mul_vector_a.swap(mul_vector_b);
 
-	const size_t total_multipliers_size = std::max(this->bytes.size(), number.bytes.size());
+	const size_t total_multipliers_size = std::max(this->bytes_.size(), number.bytes_.size());
 
 	const size_t _left = 0, _right = total_multipliers_size - 1;
 	const uint16_t first_expr_value = mul_vector_a[_left] * mul_vector_b[_left];
@@ -745,7 +745,7 @@ void numbers::whole_number::fast_mul(const whole_number& number)
 		if (result[1] == 0)
 			result.pop_back();
 
-		this->bytes = result;
+		this->bytes_ = result;
 
 		return;
 	}
@@ -785,7 +785,7 @@ void numbers::whole_number::fast_mul(const whole_number& number)
 
 	whole_number::clear_zero_bytes(result_mul_vector);
 
-	this->bytes = result_mul_vector;
+	this->bytes_ = result_mul_vector;
 }
 whole_number whole_number::product(const whole_number& multiplier) const
 {
@@ -806,7 +806,7 @@ whole_number whole_number::division(const whole_number& divisor) const
 
 bool whole_number::is_zero() const
 {
-	return this->bytes.empty();
+	return this->bytes_.empty();
 }
 bool whole_number::is_not_zero() const
 {
@@ -815,11 +815,11 @@ bool whole_number::is_not_zero() const
 
 bool whole_number::is_one() const
 {
-	return this->bytes.size() == 1 && bytes.front() == 1;
+	return this->bytes_.size() == 1 && bytes_.front() == 1;
 }
 bool whole_number::is_two() const
 {
-	return this->bytes.size() == 1 && bytes.front() == 2;
+	return this->bytes_.size() == 1 && bytes_.front() == 2;
 }
 bool whole_number::is_power_of_two() const
 {
@@ -836,11 +836,11 @@ bool whole_number::is_power_of_two() const
 size_t whole_number::num_bits() const
 {
 	// in one byte eight bits :)
-	return this->bytes.size() << 3; // * 8
+	return this->bytes_.size() << 3; // * 8
 }
 bool whole_number::is_odd() const
 {
-	return !this->bytes.empty() && this->bytes.front() & 1;
+	return !this->bytes_.empty() && this->bytes_.front() & 1;
 }
 bool whole_number::is_even() const
 {
@@ -849,19 +849,19 @@ bool whole_number::is_even() const
 
 void whole_number::set_zero()
 {
-	this->bytes.clear();
+	this->bytes_.clear();
 }
 
 whole_number& whole_number::operator++()
 {
 	if (this->is_zero())
 	{
-		this->bytes.push_back(1); 
+		this->bytes_.push_back(1); 
 		return *this;
 	}
 
-	auto byte_iterator = this->bytes.begin();
-	const auto end = this->bytes.end();
+	auto byte_iterator = this->bytes_.begin();
+	const auto end = this->bytes_.end();
 
 	while (++*byte_iterator == 0)
 	{
@@ -870,16 +870,16 @@ whole_number& whole_number::operator++()
 	}
 	
 	if (byte_iterator == end) // возможно сравнение можно заменить, но это не точно
-		this->bytes.push_back(1);
+		this->bytes_.push_back(1);
 
 	return *this;
 }
 whole_number& whole_number::operator--()
 {
-	if (this->bytes.empty())
+	if (this->bytes_.empty())
 		throw std::invalid_argument("number can not be less then zero");
 
-	auto bytes_iterator = this->bytes.begin();
+	auto bytes_iterator = this->bytes_.begin();
 
 	if(--*bytes_iterator == 0xFF)
 	{
@@ -889,8 +889,8 @@ whole_number& whole_number::operator--()
 		--*bytes_iterator;
 	}
 
-	if (this->bytes.back() == 0)
-		this->bytes.pop_back();
+	if (this->bytes_.back() == 0)
+		this->bytes_.pop_back();
 
 	return *this;
 }
