@@ -4,6 +4,8 @@
 #include <ctime>
 #include <random>
 
+#include  "performance_test.h"
+
 #include <big_numbers/whole_number.hpp>
 
 using namespace std;
@@ -52,14 +54,17 @@ public:
 	
 	static void factorial_test(const int repeat = 10)
 	{
-		for (int i = 1; i <= repeat; i++)
-		{
-			const whole_number n = 40'000u;
-			const uint64_t timer = clock();
-			const whole_number result = n.factorial();
-			cout << "factorial_test, iteration: " << i << " , time: " << clock() - timer
-				<< "ms, result = " << "*many symbols*, " << result.num_bits() << "bits" << endl;
-		}
+		const performance_test<void, whole_number> factorial([](const whole_number& number)
+			{
+				const size_t bits_count = number.factorial().num_bits();
+			}, 40'000ull, "factorial_test", repeat, 5
+		);
+
+		const benchmark_info info = factorial.perform();
+
+		iostream console(cout.rdbuf());
+		factorial.print_performance_test_info_to_stream(console, info);
+		
 		cout << endl;
 	}
 
@@ -95,12 +100,12 @@ public:
 
 	static void perform_all_tests()
 	{
-		whole_number_tests::sqrt_test();
-		whole_number_tests::log_n_test();
-		whole_number_tests::pow_test();
+		// whole_number_tests::sqrt_test();
+		// whole_number_tests::log_n_test();
+		// whole_number_tests::pow_test();
 		whole_number_tests::factorial_test();
-		whole_number_tests::gcd_test();
-		whole_number_tests::lcm_test();
+		// whole_number_tests::gcd_test();
+		// whole_number_tests::lcm_test();
 	}
 };
 

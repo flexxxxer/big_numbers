@@ -27,6 +27,16 @@ TEST(Arithmetic, Sub)
 	ASSERT_EQ(sum.to_string(), "492579453317833338");
 }
 
+TEST(Arithmetic, Multiplication)
+{
+	const whole_number a = "492579453412394583";
+	const whole_number b = "712394561245";
+
+	const whole_number mul = a * b;
+
+	ASSERT_EQ(mul.to_string(), "350910923592024757001099735835");
+}
+
 TEST(Arithmetic, Division)
 {
 	const whole_number a = "492579453412394583";
