@@ -3,7 +3,6 @@
 
 #include <string> // use std::string
 #include <algorithm> // use std::transform
-#include <tuple> // std::tuple
 #include <vector> // std::vector
 #include <random> // use for random
 
@@ -14,7 +13,7 @@ using namespace numbers;
 const converters::base_converter numbers::whole_number::hex2dec = converters::base_converter::hex_to_decimal_converter();
 const converters::base_converter numbers::whole_number::dec2hex = converters::base_converter::decimal_to_hex_converter();
 
-std::vector<byte> whole_number::uint_to_bytes(const uint32_t number)
+std::vector<numbers::byte> whole_number::uint_to_bytes(const uint32_t number)
 {
 	if (number == 0)
 		return std::vector<byte>();
@@ -32,7 +31,7 @@ std::vector<byte> whole_number::uint_to_bytes(const uint32_t number)
 
 	return bts;
 }
-std::vector<byte> whole_number::ulong_to_bytes(const uint64_t number)
+std::vector<numbers::byte> whole_number::ulong_to_bytes(const uint64_t number)
 {
 	if (number == 0)
 		return std::vector<byte>();
@@ -429,7 +428,7 @@ uint64_t numbers::whole_number::to_uint64_t() const
 	uint64_t* dt = reinterpret_cast<uint64_t*>(bts.data());
 	return *dt;
 }
-std::vector<byte> numbers::whole_number::to_bytes() const
+std::vector<numbers::byte> numbers::whole_number::to_bytes() const
 {
 	return this->bytes_;
 }
@@ -790,8 +789,8 @@ void numbers::whole_number::fast_mul(const whole_number& number)
 whole_number whole_number::product(const whole_number& multiplier) const
 {
 	whole_number result = *this;
+	result.mul(multiplier);
 	// result.fast_mul(multiplier);
-	result.fast_mul(multiplier);
 
 	return result;
 }
