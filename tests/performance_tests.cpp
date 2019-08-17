@@ -51,7 +51,8 @@ public:
 		}
 		cout << endl;
 	}
-	
+
+	// is ready
 	static void factorial_test(const int repeat = 10)
 	{
 		const performance_test<void, whole_number> factorial([](const whole_number& number)

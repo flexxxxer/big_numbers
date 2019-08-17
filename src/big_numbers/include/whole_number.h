@@ -203,20 +203,20 @@ namespace numbers
 		/**
 		 * \return dec string view of number
 		 */
-		std::string to_string() const;
+		[[nodiscard]] std::string to_string() const;
 		/**
 		 * \return hex string view of number
 		 */
-		std::string to_string_hex() const;
+		[[nodiscard]] std::string to_string_hex() const;
 		/**
 		 * \brief try cast whole number to uint64_t value
 		 * \return uint64_t value
 		 */
-		uint64_t to_uint64_t() const;
+		[[nodiscard]] uint64_t to_uint64_t() const;
 		/**
 		 * \return byte vector
 		 */
-		std::vector<byte> to_bytes() const;
+		[[nodiscard]] std::vector<byte> to_bytes() const;
 
 		/**
 		 * \brief perform AND operation
@@ -252,38 +252,111 @@ namespace numbers
 		 */
 		void shl(size_t shift_count);
 
+		/**
+		 * \brief perform addition to this number
+		 * \param number addition number
+		 */
 		void add(const whole_number& number);
-		whole_number sum(const whole_number& number) const;
+		/**
+		 * \param number addition number
+		 * \return sum of this and parametr numbers
+		 */
+		[[nodiscard]] whole_number sum(const whole_number& number) const;
 
+		/**
+		 * \brief perform subtraction from this number
+		 * \param number subtrahend number
+		 */
 		void sub(const whole_number& number);
-		whole_number difference(const whole_number& number) const;
+		/**
+		 * \param number subtrahend number
+		 * \return difference between this and parametr
+		 */
+		[[nodiscard]] whole_number difference(const whole_number& number) const;
 
+		/**
+		 * \brief perform multiply between this and parametr
+		 * \param number multiplier
+		 */
 		void mul(const whole_number& number);
+		/**
+		 * \brief perform fast multiply between this and parametr
+		 * \param number multiplier
+		 */
 		void fast_mul(const whole_number& number);
-		whole_number product(const whole_number& multiplier) const;
+		/**
+		 * \param multiplier multiplier
+		 * \return product between this and parametr
+		 */
+		[[nodiscard]] whole_number product(const whole_number& multiplier) const;
 
-		whole_number division(const whole_number& divisor) const;
-		
-		bool is_zero() const;
-		bool is_not_zero() const;
+		/**
+		 * \param divisor divisor
+		 * \return quotient
+		 */
+		[[nodiscard]] whole_number division(const whole_number& divisor) const;
 
-		bool is_one() const;
-		bool is_two() const;
-		bool is_power_of_two() const;
+		/**
+		 * \return if this is zero -> true, else -> false
+		 */
+		[[nodiscard]] bool is_zero() const;
+		/**
+		 * \return if this is zero -> false, else -> true
+		 */
+		[[nodiscard]] bool is_not_zero() const;
 
-		size_t num_bits() const;
-		bool is_odd() const;
-		bool is_even() const;
+		/**
+		 * \return if this is one -> true, else -> false
+		 */
+		[[nodiscard]] bool is_one() const;
+		/**
+		 * \return if this is two -> true, else -> false
+		 */
+		[[nodiscard]] bool is_two() const;
+		/**
+		 * \return if this is power of two -> true, else -> false
+		 */
+		[[nodiscard]] bool is_power_of_two() const;
 
+		/**
+		 * \return bits count in number (bytes count × 8)
+		 */
+		[[nodiscard]] size_t num_bits() const;
+		/**
+		 * \return if this is odd -> true, else -> false
+		 */
+		[[nodiscard]] bool is_odd() const;
+		/**
+		 * \return if this is even -> true, else -> false
+		 */
+		[[nodiscard]] bool is_even() const;
+
+		/**
+		 * \brief set value of this number to zero
+		 */
 		void set_zero();
 
-		// prefix
-		whole_number& operator ++ (); // inc
-		whole_number& operator-- (); // dec
+		/**
+		 * \brief perform prefix increment
+		 * \return this incremented value
+		 */
+		whole_number& operator ++ ();
+		/**
+		 * \brief perform prefix decrement
+		 * \return this decremented value
+		 */
+		whole_number& operator-- ();
 
-		// postfix
-		whole_number& operator ++ (int); // inc
-		whole_number& operator-- (int); // dec
+		/**
+		 * \brief perform postfix increment
+		 * \return this incremented value
+		 */
+		whole_number& operator ++ (int);
+		/**
+		 * \brief perform postfix decrement
+		 * \return this decremented value
+		 */
+		whole_number& operator-- (int);
 
 		whole_number operator + (const whole_number& number) const;
 		whole_number operator - (const whole_number& number) const;
@@ -291,20 +364,68 @@ namespace numbers
 		whole_number operator / (const whole_number& number) const;
 		whole_number operator % (const whole_number& number) const;
 
+		/**
+		 * \param shift_count shift count
+		 * \return shifted to left value
+		 */
 		whole_number operator << (size_t shift_count) const;
+		/**
+		 * \brief perform shift to left
+		 * \param shift_count shift count
+		 */
 		void operator <<= (size_t shift_count);
+		/**
+		 * \param shift_count shift count
+		 * \return shifted to right value
+		 */
 		whole_number operator >> (size_t shift_count) const;
+		/**
+		 * \brief perform shift to right
+		 * \param shift_count shift count
+		 */
 		void operator >>= (size_t shift_count);
 
+		/**
+		 * \brief AND operator
+		 * \param number number
+		 * \return result of "AND" operation
+		 */
 		whole_number operator & (const whole_number& number) const;
+		/**
+		 * \brief OR operator
+		 * \param number number
+		 * \return result of "OR" operation
+		 */
 		whole_number operator | (const whole_number& number) const;
+		/**
+		 * \brief XOR operator
+		 * \param number number
+		 * \return result of "XOR" operation
+		 */
 		whole_number operator ^ (const whole_number& number) const;
 
-		whole_number pow(const whole_number& exponent) const;
-		whole_number factorial() const;
-		whole_number sqrt() const;
-		whole_number log_n(uint64_t n) const;
-		whole_number log2() const;
+		/**
+		 * \param exponent exponent
+		 * \return this in power of parametr
+		 */
+		[[nodiscard]] whole_number pow(const whole_number& exponent) const;
+		/**
+		 * \return factorial of this number
+		 */
+		[[nodiscard]] whole_number factorial() const;
+		/**
+		 * \return sqrt of this number
+		 */
+		[[nodiscard]] whole_number sqrt() const;
+		/**
+		 * \param n base
+		 * \return the base n logarithm of this 
+		 */
+		[[nodiscard]] whole_number log_n(uint64_t n) const;
+		/**
+		 * \return the base two logarithm of this
+		 */
+		[[nodiscard]] whole_number log2() const;
 	};
 }
 

@@ -96,8 +96,8 @@ class performance_test
 
 	std::string test_name_;
 public:
-	performance_test(std::function<FunctionReturnResult(DataForPerform)> benchmarkable_function, DataForPerform perform_data, 
-		std::string name, uint32_t calc_count = 10, uint32_t preview_calc_count = 5)
+	performance_test(std::function<FunctionReturnResult(DataForPerform)> benchmarkable_function, DataForPerform perform_data,
+	    const std::string& name, const uint32_t calc_count = 10, const uint32_t preview_calc_count = 5)
 		: benchmarkable_function_(std::move(benchmarkable_function)
 		) {
 		calc_count_ = calc_count;
