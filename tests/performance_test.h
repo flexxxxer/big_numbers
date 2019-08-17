@@ -28,10 +28,7 @@ struct math_statistics
 {
 	static uint32_t average(const std::vector<uint32_t>& values)
 	{
-		uint64_t sum = 0;
-
-		for (uint32_t value : values)
-			sum += value;
+		const uint64_t sum = std::accumulate(values.begin(), values.end(), 0ull);
 
 		return static_cast<uint32_t>(sum / values.size());
 	}
@@ -91,19 +88,24 @@ class performance_test
 {
 	DataForPerform data_;
 	std::function<FunctionReturnResult(DataForPerform)> benchmarkable_function_;
+	std::function<void(DataForPerform&)> initialize_data_function_;
 	uint32_t calc_count_;
 	uint32_t preview_calc_count_;
 
 	std::string test_name_;
 public:
-	performance_test(std::function<FunctionReturnResult(DataForPerform)> benchmarkable_function, DataForPerform perform_data,
-	    const std::string& name, const uint32_t calc_count = 10, const uint32_t preview_calc_count = 5)
-		: benchmarkable_function_(std::move(benchmarkable_function)
-		) {
+	performance_test(std::function<FunctionReturnResult(DataForPerform)> benchmarkable_function,
+		std::function<void(DataForPerform&)> initialize_data_function,
+		const std::string& name, const uint32_t calc_count = 10, const uint32_t preview_calc_count = 5)
+			: benchmarkable_function_(std::move(benchmarkable_function)),
+				initialize_data_function_(initialize_data_function)
+	{
 		calc_count_ = calc_count;
 		preview_calc_count_ = preview_calc_count;
-		data_ = perform_data;
 		test_name_ = name;
+
+		// initialize data
+		initialize_data_function(data_);
 	}
 
 	[[nodiscard]] benchmark_info perform() const
@@ -112,6 +114,7 @@ public:
 		for (uint32_t i = 0; i < preview_calc_count_; i++)
 			benchmarkable_function_(data_);
 
+		// in milliseconds, how mach time function work
 		std::vector<uint32_t> run_times(calc_count_);
 
 		for(uint32_t i = 0; i < calc_count_; i++)
@@ -138,15 +141,16 @@ public:
 		return info;
 	}
 
-	void print_performance_test_info_to_stream(std::iostream& stream, benchmark_info info) const
+	void print_performance_test_info_to_stream(std::iostream& stream, const benchmark_info& info) const
 	{
-		stream << this->test_name_ << " benchmark" << std::endl;
-		stream << "max time: " << info.max_runtime_ms << "ms" << std::endl;
-		stream << "min time: " << info.min_runtime_ms << "ms" << std::endl;
-		stream << "average time: " << info.average_runtime_ms << "ms" << std::endl;
-		stream << "median time: " << info.median_runtime_ms << "ms" << std::endl;
-		stream << "moda time: " << info.moda_runtime_ms << "ms" << std::endl;
-		stream << "standard deviation time: " << info.standard_deviation_runtime_ms << "ms" << std::endl;
+		stream << "benchmark name: " << this->test_name_ << std::endl;
+		stream << "<<<<< INFO >>>>>" << std::endl;
+		stream << "max time: " << info.max_runtime_ms << " ms" << std::endl;
+		stream << "min time: " << info.min_runtime_ms << " ms" << std::endl;
+		stream << "average time: " << info.average_runtime_ms << " ms" << std::endl;
+		stream << "median time: " << info.median_runtime_ms << " ms" << std::endl;
+		stream << "moda time: " << info.moda_runtime_ms << " ms" << std::endl;
+		stream << "standard deviation time: " << info.standard_deviation_runtime_ms << " ms" << std::endl;
 	}
 };
 

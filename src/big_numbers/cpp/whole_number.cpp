@@ -927,6 +927,8 @@ whole_number whole_number::operator % (const whole_number& number) const
 	return r;
 }
 
+whole_number& numbers::whole_number::operator = (const whole_number& number) = default;
+
 whole_number whole_number::operator << (const size_t shift_count) const
 {
 	whole_number copy = *this;

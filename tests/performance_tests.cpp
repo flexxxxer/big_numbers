@@ -16,49 +16,116 @@ class whole_number_tests
 public:
 	static void sqrt_test(const int repeat = 10)
 	{
-		for (int i = 1; i <= repeat; i++)
+		const function init_number = [](whole_number& number)
 		{
-			const whole_number n = "100000000000000000000000000000000000000000000000000000000000000000000000";
-			const uint64_t timer = clock();
-			whole_number result = n.sqrt();
-			cout << "sqrt_test, iteration: " << i << " , time: " << clock() - timer << "ms, result = " << result.to_string() << endl;
-		}
+			number = static_cast<whole_number>("100000000000000000000000000000000000000000000000000000000000000000000000");
+		};
+
+		const function sqrt_benchmark = [](const whole_number& number)
+		{
+			size_t bit_count = number.sqrt().num_bits();
+			bit_count++;
+		};
+
+		const performance_test<void, whole_number> sqrt
+		(
+			sqrt_benchmark,
+			init_number,
+			"sqrt_test",
+			repeat,
+			5
+		);
+
+		const benchmark_info info = sqrt.perform();
+
+		iostream console(cout.rdbuf());
+		sqrt.print_performance_test_info_to_stream(console, info);
+
 		cout << endl;
 	}
 
-	static void log_n_test(const int repeat = 10, const uint64_t n = 10)
+	static void log_n_test(const int repeat = 10)
 	{
-		for (int i = 1; i <= repeat; i++)
+		const function init_number_and_base = [](std::pair<whole_number, uint64_t>& values)
 		{
-			const whole_number number = "100000000000000000000000000000000000000000000000000000000000000000000000";
-			const uint64_t timer = clock();
-			whole_number result = number.log_n(n);
-			cout << "log_n_test, iteration: " << i << " , time: " << clock() - timer << "ms, result = " << result.to_string() << endl;
-		}
+			values.first = static_cast<whole_number>("100000000000000000000000000000000000000000000000000000000000000000000000");
+			values.second = 10u;
+		};
+
+		const function log_n_benchmark = [](const std::pair<whole_number, uint64_t>& values)
+		{
+			size_t bit_count = values.first.log_n(values.second).num_bits();
+			bit_count++;
+		};
+
+		const performance_test<void, std::pair<whole_number, uint64_t>> log_n
+		(
+			log_n_benchmark,
+			init_number_and_base,
+			"log_n_test",
+			repeat,
+			5
+		);
+
+		const benchmark_info info = log_n.perform();
+
+		iostream console(cout.rdbuf());
+		log_n.print_performance_test_info_to_stream(console, info);
+
 		cout << endl;
 	}
 
 	static void pow_test(const int repeat = 10)
 	{
-		for (int i = 1; i <= repeat; i++)
+		const function init_base_and_power = [](std::pair<whole_number, whole_number>& values)
 		{
-			const whole_number base = 10'000u;
-			const whole_number power = 30'000u;
-			const uint64_t timer = clock();
-			const whole_number result = base.pow(power);
-			cout << "pow_test, iteration: " << i << " , time: " << clock() - timer
-				<< "ms, result = " << "*many symbols*, " << result.num_bits() << "bits" << endl;
-		}
+			values.first = 10'000u;
+			values.second = 30'000u;
+		};
+
+		const function pow_benchmark = [](const std::pair<whole_number, whole_number>& values)
+		{
+			size_t bit_count = values.first.pow(values.second).num_bits();
+			bit_count++;
+		};
+
+		const performance_test<void, std::pair<whole_number, whole_number>> factorial
+		(
+			pow_benchmark,
+			init_base_and_power,
+			"pow_test",
+			repeat,
+			5
+		);
+
+		const benchmark_info info = factorial.perform();
+
+		iostream console(cout.rdbuf());
+		factorial.print_performance_test_info_to_stream(console, info);
+
 		cout << endl;
 	}
 
-	// is ready
 	static void factorial_test(const int repeat = 10)
 	{
-		const performance_test<void, whole_number> factorial([](const whole_number& number)
-			{
-				const size_t bits_count = number.factorial().num_bits();
-			}, 40'000ull, "factorial_test", repeat, 5
+		const function init_number = [](whole_number& number)
+		{
+			number = static_cast<whole_number>("40000");
+		};
+		
+		const function factorial_benchmark = [](const whole_number& number)
+		{
+			size_t bit_count = number.factorial().num_bits();
+			bit_count++;
+		};
+		
+		const performance_test<void, whole_number> factorial
+		(
+			factorial_benchmark,
+			init_number,
+			"factorial_test", 
+			repeat, 
+			5
 		);
 
 		const benchmark_info info = factorial.perform();
@@ -71,49 +138,81 @@ public:
 
 	static void gcd_test(const int repeat = 10)
 	{
-		for (int i = 1; i <= repeat; i++)
+		const function init_first_and_second = [](std::pair<whole_number, whole_number>& values)
 		{
-			const whole_number a = 1956929592349429ull;
-			const whole_number b = 14418577843ull;
-			const uint64_t timer = clock();
-			const whole_number result = whole_number::extensions::gcd(a, b);
-			
-			cout << "gcd_test, iteration: " << i << " , time: " << clock() - timer
-				<< "ms, result = " << "*many symbols*, " << result.num_bits() << "bits" << endl;
-		}
+			values.first = static_cast<whole_number>("94268994258938412899835384830325634925939491824981248");
+			values.second = static_cast<whole_number>("39659214656723773994969923999239997777");
+		};
+
+		const function gcd_benchmark = [](const std::pair<whole_number, whole_number>& values)
+		{
+			size_t bit_count = whole_number::extensions::gcd(values.first, values.second).num_bits();
+			bit_count++;
+		};
+
+		const performance_test<void, std::pair<whole_number, whole_number>> gcd
+		(
+			gcd_benchmark,
+			init_first_and_second,
+			"gcd_test",
+			repeat,
+			5
+		);
+
+		const benchmark_info info = gcd.perform();
+
+		iostream console(cout.rdbuf());
+		gcd.print_performance_test_info_to_stream(console, info);
+
 		cout << endl;
 	}
 
 	static void lcm_test(const int repeat = 10)
 	{
-		for (int i = 1; i <= repeat; i++)
+		const function init_first_and_second = [](std::pair<whole_number, whole_number>& values)
 		{
-			const whole_number a = 1956929592349429ull;
-			const whole_number b = 14418577843ull;
-			const uint64_t timer = clock();
-			const whole_number result = whole_number::extensions::lcm(a, b);
+			values.first = static_cast<whole_number>("94268994258938412899835384830325634925939491824981248");
+			values.second = static_cast<whole_number>("39659214656723773994969923999239997777");
+		};
 
-			cout << "lcm_test, iteration: " << i << " , time: " << clock() - timer
-				<< "ms, result = " << "*many symbols*, " << result.num_bits() << "bits" << endl;
-		}
+		const function lcm_benchmark = [](const std::pair<whole_number, whole_number>& values)
+		{
+			size_t bit_count = whole_number::extensions::lcm(values.first, values.second).num_bits();
+			bit_count++;
+		};
+
+		const performance_test<void, std::pair<whole_number, whole_number>> lcm
+		(
+			lcm_benchmark,
+			init_first_and_second,
+			"lcm_test",
+			repeat,
+			5
+		);
+
+		const benchmark_info info = lcm.perform();
+
+		iostream console(cout.rdbuf());
+		lcm.print_performance_test_info_to_stream(console, info);
+
 		cout << endl;
 	}
 
 	static void perform_all_tests()
 	{
-		// whole_number_tests::sqrt_test();
-		// whole_number_tests::log_n_test();
-		// whole_number_tests::pow_test();
+		whole_number_tests::sqrt_test();
+		whole_number_tests::log_n_test();
+		whole_number_tests::pow_test();
 		whole_number_tests::factorial_test();
-		// whole_number_tests::gcd_test();
-		// whole_number_tests::lcm_test();
+		whole_number_tests::gcd_test();
+		whole_number_tests::lcm_test();
 	}
 };
 
 int main()
 {
 	whole_number_tests::perform_all_tests();
-
+	
 	return 0;
 }
 

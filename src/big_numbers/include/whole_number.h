@@ -364,6 +364,8 @@ namespace numbers
 		whole_number operator / (const whole_number& number) const;
 		whole_number operator % (const whole_number& number) const;
 
+		whole_number& operator = (const whole_number& number);
+		
 		/**
 		 * \param shift_count shift count
 		 * \return shifted to left value
