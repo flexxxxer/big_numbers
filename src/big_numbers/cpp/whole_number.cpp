@@ -6,6 +6,10 @@
 #include <vector> // std::vector
 #include <random> // use for random
 
+#include <future>
+#include <thread>
+// #include "hpc/ctpl.h"
+
 #include "../include/whole_number.h" // use numbers::whole_number
 
 using namespace numbers;
@@ -181,6 +185,16 @@ void whole_number::add_logic_gate(whole_number& destination, const whole_number&
 }
 void whole_number::add_classic(whole_number& destination, const whole_number& source)
 {
+	if (destination.is_zero() && source.is_zero())
+		return;
+	if (source.is_zero())
+		return;
+	if(destination.is_zero())
+	{
+		destination = source;
+		return;
+	}
+	
 	if (destination.bytes_.size() < source.bytes_.size())
 		destination.bytes_.resize(source.bytes_.size());
 
@@ -599,6 +613,15 @@ void whole_number::mul(const whole_number& number)
 		return;;
 	}
 
+	if (number.is_one())
+		return;
+	
+	if(this->is_one())
+	{
+		this->bytes_ = number.bytes_;
+		return;
+	}
+
 	std::vector<byte> mul_vector_a(this->bytes_);
 	std::vector<byte> mul_vector_b(number.bytes_);
 
@@ -674,123 +697,43 @@ void whole_number::mul(const whole_number& number)
 
 	this->bytes_ = result_mul_vector;
 }
-void numbers::whole_number::fast_mul(const whole_number& number)
+void whole_number::shift_and_add_mul(const whole_number& number)
 {
-	struct fft_fast
-	{
-		__declspec(noinline) static uint64_t calculate_expr_value_fast(const std::vector<byte>& greater, const std::vector<byte>& lower,
-			size_t left, size_t right)
-		{
-			if (lower.size() <= left)
-				return 0;
-
-			uint64_t sum = 0u;
-			size_t tmp_left = left, tmp_right = right;
-			size_t free_pairs_count = lower.size() == 1 ?
-				2 : lower.size() > right ? (1ull + (lower.size() == right)) : lower.size() == right ? 2
-				: (lower.size() - left + (lower.size() >= right ? -static_cast<int64_t>(lower.size() - right) : 1));
-
-			while(--free_pairs_count != 0)
-			{
-				const uint32_t pair_value = greater[tmp_right] * lower[tmp_left];
-				sum += pair_value;
-
-				tmp_right--; tmp_left++;
-			}
-
-			if (tmp_left >= lower.size())
-				return sum;
-			
-			while(tmp_left < tmp_right)
-			{
-				const uint32_t pair_value = greater[tmp_right] * lower[tmp_left] + greater[tmp_left] * lower[tmp_right];;
-				sum += pair_value;
-
-				tmp_right--; tmp_left++;
-			}
-			
-			if (tmp_left == tmp_right && tmp_left < lower.size())
-				sum += static_cast<uint64_t>(greater[tmp_right]) * static_cast<uint64_t>(lower[tmp_left]);
-
-			return sum;
-		}
-	};
-
 	if (this->is_zero() || number.is_zero())
 	{
-		this->bytes_.clear(); // set zero
-		return;;
-	}
-
-	std::vector<byte> mul_vector_a(this->bytes_);
-	std::vector<byte> mul_vector_b(number.bytes_);
-
-	if (mul_vector_a.size() < mul_vector_b.size())
-		mul_vector_a.swap(mul_vector_b);
-
-	const size_t total_multipliers_size = std::max(this->bytes_.size(), number.bytes_.size());
-
-	const size_t _left = 0, _right = total_multipliers_size - 1;
-	const uint16_t first_expr_value = mul_vector_a[_left] * mul_vector_b[_left];
-
-	if (total_multipliers_size == 1)
-	{
-		std::vector<byte> result =
-		{
-			static_cast<byte>(first_expr_value),
-			static_cast<byte>(first_expr_value >> 8)
-		};
-
-		if (result[1] == 0)
-			result.pop_back();
-
-		this->bytes_ = result;
-
+		this->set_zero();
 		return;
 	}
-
-	std::vector<std::pair<byte, uint64_t>> fft_calculations; fft_calculations.resize(total_multipliers_size * 2 - 1);
-	fft_calculations[0] = std::pair<byte, uint64_t>(static_cast<byte>(first_expr_value), first_expr_value >> 8);
-
-	size_t current_fft_calc_index = 1; // because first is inserted
-
-	for (size_t i = 1; i <= _right; i++)
+	if(number.is_one())
 	{
-		uint64_t value = fft_fast::calculate_expr_value_fast(mul_vector_a, mul_vector_b, _left, i);
-		value += fft_calculations[current_fft_calc_index - 1].second;
+		*this = whole_number::one();
+		return;;
+	}
+	if (this->is_one())
+	{
+		*this = number;
+		return;;
+	}
+	
+	whole_number ans = whole_number::zero(); size_t count = 0;
+	const whole_number n = *this; whole_number m = number;
 
-		fft_calculations[current_fft_calc_index++] = std::pair<byte, uint64_t>(static_cast<byte>(value), value >> 8);
+	while(m.is_not_zero())
+	{
+		if (m.is_odd())
+			ans.add(n << count);
+
+		++count;
+		m >>= 1;
 	}
 
-	for (size_t i = 1; i <= _right; i++)
-	{
-		uint64_t value = fft_fast::calculate_expr_value_fast(mul_vector_a, mul_vector_b, i, _right);
-		value += fft_calculations[current_fft_calc_index - 1].second;
-
-		fft_calculations[current_fft_calc_index++] = std::pair<byte, uint64_t>(static_cast<byte>(value), value >> 8);
-	}
-
-	std::vector<byte> result_mul_vector; result_mul_vector.reserve(total_multipliers_size * 2);
-	for (std::pair<byte, uint64_t>& fft_calculation : fft_calculations)
-		result_mul_vector.push_back(fft_calculation.first);
-
-	const uint64_t last_carry = fft_calculations.back().second;
-	std::vector<byte> carry_bytes = whole_number::ulong_to_bytes(last_carry);
-	if (!carry_bytes.empty())
-	{
-		result_mul_vector.reserve(result_mul_vector.size() + carry_bytes.size());
-		result_mul_vector.insert(result_mul_vector.end(), carry_bytes.begin(), carry_bytes.end());
-	}
-
-	whole_number::clear_zero_bytes(result_mul_vector);
-
-	this->bytes_ = result_mul_vector;
+	*this = ans;
 }
 whole_number whole_number::product(const whole_number& multiplier) const
 {
 	whole_number result = *this;
 	result.mul(multiplier);
-	// result.fast_mul(multiplier);
+	// result.shift_and_add_mul(multiplier);
 
 	return result;
 }
@@ -926,7 +869,6 @@ whole_number whole_number::operator % (const whole_number& number) const
 
 	return r;
 }
-
 whole_number& numbers::whole_number::operator = (const whole_number& number) = default;
 
 whole_number whole_number::operator << (const size_t shift_count) const
@@ -1009,7 +951,7 @@ whole_number whole_number::factorial() const
 
 			whole_number m = l; m.add(r); m.shr(1);
 			whole_number m_plus_one = m; ++m_plus_one;
-
+			
 			return factorial::prod_tree(l, m) * factorial::prod_tree(m_plus_one, r);
 		}
 	};
@@ -1022,6 +964,222 @@ whole_number whole_number::factorial() const
 
 	return factorial::prod_tree(whole_number::two(), *this);
 }
+whole_number numbers::whole_number::factorial_parallel() const
+{
+	struct factorial_parallel
+	{
+		
+		// std::thread function
+		static void thread_calculate_tree_func(std::promise<whole_number>&& promise, const whole_number& l, const whole_number& r)
+		{
+			const whole_number value = factorial_parallel::prod_tree_one_thread(l, r);
+			promise.set_value(value);
+		}
+
+		// std::thread function
+		static void mul_two_numbers_func(std::promise<whole_number>&& promise, const whole_number& a, const whole_number& b)
+		{
+			promise.set_value(a * b);
+		}
+
+		// calculate tree on one thread
+		static whole_number prod_tree_one_thread(const whole_number& l, const whole_number& r)
+		{
+			const sbyte compare_result = whole_number::compare(l, r);
+			if (compare_result == 1)
+				return whole_number::one();
+			if (compare_result == 0)
+				return l;
+			if ((r - l).is_one())
+				return r * l;
+
+			whole_number m = l; m.add(r); m.shr(1);
+			whole_number m_plus_one = m; ++m_plus_one;
+
+			return factorial_parallel::prod_tree_one_thread(l, m) * factorial_parallel::prod_tree_one_thread(m_plus_one, r);
+		}
+		
+		static std::vector<std::pair<whole_number, whole_number>>
+			split_factorial_tree(const whole_number& l, const whole_number& r, const size_t thread_count)
+		{
+			std::vector<std::pair<whole_number, whole_number>> splitted_tree;
+			splitted_tree.reserve(thread_count);
+
+			const whole_number step = (r - l) / thread_count;
+			sbyte compare_result = -1;
+			
+			for(whole_number i = l; compare_result == -1; )
+			{
+				whole_number next_step_value = i + step;
+
+#ifdef _MSC_VER
+				splitted_tree.emplace_back(i, next_step_value);
+#elif
+				splitted_tree.push_back(
+					std::make_pair(i, next_step_value)
+				);
+#endif
+				i = ++next_step_value;
+
+				compare_result = whole_number::compare(i, r);
+			}
+
+			if (compare_result == 1)
+				splitted_tree.back().second = r;
+
+			return splitted_tree;
+		}
+
+		static whole_number parallel_prod_tree(const whole_number& l, const whole_number& r)
+		{
+			const size_t thread_count = std::thread::hardware_concurrency();
+
+			std::vector<std::thread> threads (thread_count);
+			// std::thread* threads = new std::thread[thread_count];
+			std::vector<std::promise<whole_number>> promises (thread_count);
+			std::vector<std::future<whole_number>> future_results (thread_count);
+			
+			auto tree = factorial_parallel::split_factorial_tree(l, r, thread_count);
+
+			for(size_t i = 0; i < thread_count; i++)
+			{
+				promises[i] = std::promise<whole_number>();
+				future_results[i] = promises[i].get_future();
+				
+				threads[i] = std::thread(
+					&factorial_parallel::thread_calculate_tree_func,
+					std::move(promises[i]),
+					tree[i].first, tree[i].second
+				);
+			}
+
+			for (size_t i = 0; i < thread_count; i++)
+				threads[i].join();
+
+			// copy results
+			std::vector<whole_number> numbers_for_mul(thread_count);
+			for (size_t i = 0; i < thread_count; i++)
+				numbers_for_mul[i] = future_results[i].get();
+
+			// clear temporary arrays
+			future_results.clear();
+			promises.clear();
+			threads.clear();
+
+			future_results = std::vector<std::future<whole_number>>();
+			promises = std::vector<std::promise<whole_number>>();
+			threads = std::vector<std::thread>();
+
+			// resize
+			future_results.resize(thread_count / 2);
+			promises.resize(thread_count / 2);
+			threads.resize(thread_count / 2);
+			
+			size_t mul_numbers_tree_count = thread_count / 2;
+			while (mul_numbers_tree_count >= 2)
+			{
+				std::vector<whole_number> next_calc_numbers; next_calc_numbers.reserve(mul_numbers_tree_count);
+				
+				for(size_t i = 0; i < numbers_for_mul.size() / 2; i++)
+				{
+					promises[i] = std::promise<whole_number>();
+					future_results[i] = promises[i].get_future();
+
+					threads[i] = std::thread(
+						&factorial_parallel::mul_two_numbers_func,
+						std::move(promises[i]),
+						numbers_for_mul[i * 2], numbers_for_mul[i * 2 + 1]
+					);
+				}
+
+				if (numbers_for_mul.size() % 2 == 1)
+					next_calc_numbers.push_back(numbers_for_mul.back());
+
+				for (std::thread& thread : threads)
+					thread.join();
+
+				for (std::future<whole_number>& future_result : future_results)
+					next_calc_numbers.push_back(future_result.get());
+
+				numbers_for_mul = next_calc_numbers;
+
+				promises.clear();
+				future_results.clear();
+				threads.clear();
+
+				promises.resize(numbers_for_mul.size() / 2);
+				future_results.resize(numbers_for_mul.size() / 2);
+				threads.resize(numbers_for_mul.size() / 2);
+				
+				mul_numbers_tree_count /= 2;
+			}
+
+			whole_number result = whole_number::zero();
+			
+			/*
+			if(numbers_for_mul.size() == 2) // if have two numbers, mul this
+			{
+				result = numbers_for_mul.front() * numbers_for_mul[1];
+			}
+			else if(numbers_for_mul.size() == 3) // parallel 3 mul to 1 mul and 1 shift to left
+			{
+				const auto np = std::find_if(numbers_for_mul.begin(), numbers_for_mul.end(), [](const whole_number& n) { return n.is_even(); });
+				if (np != numbers_for_mul.end()) // , if we can
+				{
+					if(np != numbers_for_mul.end() - 1) // swap
+					{
+						const whole_number number_for_div_2 = *np;
+						*np = numbers_for_mul[2];
+						numbers_for_mul[2] = (number_for_div_2 >> 1);
+					}
+					else
+					{
+						(*np).shr(1);
+					}
+
+					promises.front() = std::promise<whole_number>();
+					future_results.front() = promises.front().get_future();
+
+					threads.front() = std::thread(
+						&factorial_parallel::mul_two_numbers_func,
+						std::move(promises.front()),
+						numbers_for_mul[1], numbers_for_mul[2]
+					);
+
+					result = (numbers_for_mul.front() << 1);
+
+					threads.front().join(); // wait when thread end his mul
+
+					result = result * future_results.front().get();
+					
+				}
+				else
+				{
+					result = numbers_for_mul[0] * numbers_for_mul[1] * numbers_for_mul[2];
+				}
+			}*/
+
+			result = numbers_for_mul[0] * numbers_for_mul[1];
+
+			if (numbers_for_mul.size() == 3)
+				result.mul(numbers_for_mul[2]);
+			
+			return result;
+		}
+	};
+
+	if (this->is_zero())
+		return whole_number::one();
+
+	if (this->is_one() || this->is_two())
+		return *this;
+
+	if (this->bytes_.size() == 1 || std::thread::hardware_concurrency() <= 2)
+		return this->factorial();
+
+	return factorial_parallel::parallel_prod_tree(whole_number::two(), *this);
+}
+
 whole_number whole_number::sqrt() const
 {
 	whole_number x0 = *this;

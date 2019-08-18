@@ -251,7 +251,7 @@ namespace numbers
 		 * \param shift_count bits shift count
 		 */
 		void shl(size_t shift_count);
-
+		
 		/**
 		 * \brief perform addition to this number
 		 * \param number addition number
@@ -283,7 +283,7 @@ namespace numbers
 		 * \brief perform fast multiply between this and parametr
 		 * \param number multiplier
 		 */
-		void fast_mul(const whole_number& number);
+		void shift_and_add_mul(const whole_number& number);
 		/**
 		 * \param multiplier multiplier
 		 * \return product between this and parametr
@@ -415,6 +415,7 @@ namespace numbers
 		 * \return factorial of this number
 		 */
 		[[nodiscard]] whole_number factorial() const;
+		[[nodiscard]] whole_number factorial_parallel() const;
 		/**
 		 * \return sqrt of this number
 		 */

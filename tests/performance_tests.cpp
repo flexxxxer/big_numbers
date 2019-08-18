@@ -136,6 +136,37 @@ public:
 		cout << endl;
 	}
 
+	static void factorial_parallel_test(const int repeat = 10)
+	{
+		const function init_number = [](whole_number& number)
+		{
+			number = static_cast<whole_number>("40000");
+		};
+
+		const function factorial_benchmark = [](const whole_number& number)
+		{
+			size_t bit_count = number.factorial_parallel().num_bits();
+			bit_count++;
+		};
+
+		const performance_test<void, whole_number> factorial
+		(
+			factorial_benchmark,
+			init_number,
+			"factorial_parallel_test",
+			repeat,
+			5
+		);
+
+		const benchmark_info info = factorial.perform();
+
+		iostream console(cout.rdbuf());
+		factorial.print_performance_test_info_to_stream(console, info);
+		cout << "add info: " << std::thread::hardware_concurrency() << " threads on machine" << endl;
+
+		cout << endl;
+	}
+	
 	static void gcd_test(const int repeat = 10)
 	{
 		const function init_first_and_second = [](std::pair<whole_number, whole_number>& values)
@@ -200,18 +231,21 @@ public:
 
 	static void perform_all_tests()
 	{
-		whole_number_tests::sqrt_test();
-		whole_number_tests::log_n_test();
-		whole_number_tests::pow_test();
+		// whole_number_tests::sqrt_test();
+		// whole_number_tests::log_n_test();
+		// whole_number_tests::pow_test();
 		whole_number_tests::factorial_test();
-		whole_number_tests::gcd_test();
-		whole_number_tests::lcm_test();
+		whole_number_tests::factorial_parallel_test();
+		// whole_number_tests::gcd_test();
+		// whole_number_tests::lcm_test();
 	}
 };
 
 int main()
 {
 	whole_number_tests::perform_all_tests();
+
+	cin.get();	
 	
 	return 0;
 }
