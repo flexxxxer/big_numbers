@@ -1099,7 +1099,7 @@ whole_number numbers::whole_number::factorial_parallel() const
 	if (this->is_one() || this->is_two())
 		return *this;
 
-	if (this->bytes_.size() == 1 || std::thread::hardware_concurrency() <= 2)
+	if (this->bytes_.size() == 1 || std::thread::hardware_concurrency() < 2)
 		return this->factorial();
 
 	return factorial_parallel::parallel_prod_tree(whole_number::two(), *this);

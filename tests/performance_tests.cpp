@@ -232,8 +232,7 @@ public:
 		// whole_number_tests::sqrt_test();
 		// whole_number_tests::log_n_test();
 		// whole_number_tests::pow_test();
-	    // whole_number_tests::factorial_test();
-		cin.get();
+	    whole_number_tests::factorial_test();
 		whole_number_tests::factorial_parallel_test();
 		// whole_number_tests::gcd_test();
 		// whole_number_tests::lcm_test();

@@ -13,7 +13,7 @@ file(GLOB SOURCE_FILES
 add_executable(big_numbers ${SOURCE_FILES})
 
 option(TESTING "Run tests" off)
-option(PERFORMANCE_TESTING "Run performance tests" off)
+option(PERFORMANCE_TESTING "Run performance tests" on)
 
 if(TESTING)
 	add_definitions (-DTESTING_ENABLED=1)
