@@ -8,7 +8,7 @@
 
 #include <future>
 #include <thread>
-// #include "hpc/ctpl.h"
+#include "hpc/thread_pool.h"
 
 #include "../include/whole_number.h" // use numbers::whole_number
 
@@ -968,20 +968,6 @@ whole_number numbers::whole_number::factorial_parallel() const
 {
 	struct factorial_parallel
 	{
-		
-		// std::thread function
-		static void thread_calculate_tree_func(std::promise<whole_number>&& promise, const whole_number& l, const whole_number& r)
-		{
-			const whole_number value = factorial_parallel::prod_tree_one_thread(l, r);
-			promise.set_value(value);
-		}
-
-		// std::thread function
-		static void mul_two_numbers_func(std::promise<whole_number>&& promise, const whole_number& a, const whole_number& b)
-		{
-			promise.set_value(a * b);
-		}
-
 		// calculate tree on one thread
 		static whole_number prod_tree_one_thread(const whole_number& l, const whole_number& r)
 		{
@@ -1032,29 +1018,27 @@ whole_number numbers::whole_number::factorial_parallel() const
 
 		static whole_number parallel_prod_tree(const whole_number& l, const whole_number& r)
 		{
-			const size_t thread_count = std::thread::hardware_concurrency();
+			hpc::thread_pool<whole_number>& thread_pool = hpc::thread_pool<whole_number>::get_instance();
 
-			std::vector<std::thread> threads (thread_count);
+			const size_t thread_count = thread_pool.threads_capacity();
+			
 			// std::thread* threads = new std::thread[thread_count];
-			std::vector<std::promise<whole_number>> promises (thread_count);
 			std::vector<std::future<whole_number>> future_results (thread_count);
 			
 			auto tree = factorial_parallel::split_factorial_tree(l, r, thread_count);
 
 			for(size_t i = 0; i < thread_count; i++)
 			{
-				promises[i] = std::promise<whole_number>();
-				future_results[i] = promises[i].get_future();
+				whole_number& f = tree[i].first;
+				whole_number& s = tree[i].second;
 				
-				threads[i] = std::thread(
-					&factorial_parallel::thread_calculate_tree_func,
-					std::move(promises[i]),
-					tree[i].first, tree[i].second
-				);
+				future_results[i] = thread_pool.run([&f, &s]()
+				{
+					return factorial_parallel::prod_tree_one_thread(f, s);
+				});
 			}
 
-			for (size_t i = 0; i < thread_count; i++)
-				threads[i].join();
+			thread_pool.wait_all_jobs();
 
 			// copy results
 			std::vector<whole_number> numbers_for_mul(thread_count);
@@ -1063,17 +1047,9 @@ whole_number numbers::whole_number::factorial_parallel() const
 
 			// clear temporary arrays
 			future_results.clear();
-			promises.clear();
-			threads.clear();
-
-			future_results = std::vector<std::future<whole_number>>();
-			promises = std::vector<std::promise<whole_number>>();
-			threads = std::vector<std::thread>();
 
 			// resize
 			future_results.resize(thread_count / 2);
-			promises.resize(thread_count / 2);
-			threads.resize(thread_count / 2);
 			
 			size_t mul_numbers_tree_count = thread_count / 2;
 			while (mul_numbers_tree_count >= 2)
@@ -1082,87 +1058,36 @@ whole_number numbers::whole_number::factorial_parallel() const
 				
 				for(size_t i = 0; i < numbers_for_mul.size() / 2; i++)
 				{
-					promises[i] = std::promise<whole_number>();
-					future_results[i] = promises[i].get_future();
+					whole_number& f = numbers_for_mul[i * 2];
+					whole_number& s = numbers_for_mul[i * 2 + 1];
 
-					threads[i] = std::thread(
-						&factorial_parallel::mul_two_numbers_func,
-						std::move(promises[i]),
-						numbers_for_mul[i * 2], numbers_for_mul[i * 2 + 1]
-					);
+					future_results[i] = thread_pool.run([&f, &s]()
+					{
+						return f * s;
+					});
 				}
 
 				if (numbers_for_mul.size() % 2 == 1)
 					next_calc_numbers.push_back(numbers_for_mul.back());
 
-				for (std::thread& thread : threads)
-					thread.join();
+				thread_pool.wait_all_jobs();
 
 				for (std::future<whole_number>& future_result : future_results)
 					next_calc_numbers.push_back(future_result.get());
 
 				numbers_for_mul = next_calc_numbers;
 
-				promises.clear();
 				future_results.clear();
-				threads.clear();
 
-				promises.resize(numbers_for_mul.size() / 2);
 				future_results.resize(numbers_for_mul.size() / 2);
-				threads.resize(numbers_for_mul.size() / 2);
 				
 				mul_numbers_tree_count /= 2;
 			}
 
-			whole_number result = whole_number::zero();
-			
-			/*
-			if(numbers_for_mul.size() == 2) // if have two numbers, mul this
-			{
-				result = numbers_for_mul.front() * numbers_for_mul[1];
-			}
-			else if(numbers_for_mul.size() == 3) // parallel 3 mul to 1 mul and 1 shift to left
-			{
-				const auto np = std::find_if(numbers_for_mul.begin(), numbers_for_mul.end(), [](const whole_number& n) { return n.is_even(); });
-				if (np != numbers_for_mul.end()) // , if we can
-				{
-					if(np != numbers_for_mul.end() - 1) // swap
-					{
-						const whole_number number_for_div_2 = *np;
-						*np = numbers_for_mul[2];
-						numbers_for_mul[2] = (number_for_div_2 >> 1);
-					}
-					else
-					{
-						(*np).shr(1);
-					}
+			whole_number result = numbers_for_mul.front() * numbers_for_mul.back();
 
-					promises.front() = std::promise<whole_number>();
-					future_results.front() = promises.front().get_future();
-
-					threads.front() = std::thread(
-						&factorial_parallel::mul_two_numbers_func,
-						std::move(promises.front()),
-						numbers_for_mul[1], numbers_for_mul[2]
-					);
-
-					result = (numbers_for_mul.front() << 1);
-
-					threads.front().join(); // wait when thread end his mul
-
-					result = result * future_results.front().get();
-					
-				}
-				else
-				{
-					result = numbers_for_mul[0] * numbers_for_mul[1] * numbers_for_mul[2];
-				}
-			}*/
-
-			result = numbers_for_mul[0] * numbers_for_mul[1];
-
-			if (numbers_for_mul.size() == 3)
-				result.mul(numbers_for_mul[2]);
+			//if(numbers_for_mul.size() == 3)
+			//	result = numbers_for_mul[1] * result;
 			
 			return result;
 		}
@@ -1262,7 +1187,7 @@ whole_number whole_number::extensions::lcm(const whole_number& a, const whole_nu
 	return (a * b / whole_number::extensions::gcd(a, b));
 }
 
-whole_number whole_number::extensions::random(uint32_t max_byte_count)
+whole_number whole_number::extensions::random(const uint32_t max_byte_count)
 {
 	if (max_byte_count == 0)
 		return whole_number::zero();

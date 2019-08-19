@@ -1,11 +1,9 @@
 #if !defined TESTING_ENABLED && defined PERFORMANCE_TESTING_ENABLED
 
 #include <iostream>
-#include <ctime>
 #include <random>
 
 #include  "performance_test.h"
-
 #include <big_numbers/whole_number.hpp>
 
 using namespace std;
@@ -234,7 +232,8 @@ public:
 		// whole_number_tests::sqrt_test();
 		// whole_number_tests::log_n_test();
 		// whole_number_tests::pow_test();
-		whole_number_tests::factorial_test();
+	    // whole_number_tests::factorial_test();
+		cin.get();
 		whole_number_tests::factorial_parallel_test();
 		// whole_number_tests::gcd_test();
 		// whole_number_tests::lcm_test();
