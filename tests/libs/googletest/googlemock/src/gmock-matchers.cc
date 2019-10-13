@@ -131,11 +131,11 @@ class MaxBipartiteMatchState {
     // 'seen' is used for path finding { 0: unseen, 1: seen }.
     ::std::vector<char> seen;
     // Searches the residual flow graph for a path from each left node to
-    // the sink in the residual flow graph, and if one is found, add flow
+    // the sink in the residual flow graph, and if one is found, add_classic flow
     // to the graph. It's okay to search through the left nodes once. The
     // edge from the implicit source node to each previously-visited left
     // node will have flow if that left node has any path to the sink
-    // whatsoever. Subsequent augmentations can only add flow to the
+    // whatsoever. Subsequent augmentations can only add_classic flow to the
     // network, and cannot take away that previous flow unit from the source.
     // Since the source-to-left edge can only carry one flow unit (or,
     // each element can be matched to only one matcher), there is no need

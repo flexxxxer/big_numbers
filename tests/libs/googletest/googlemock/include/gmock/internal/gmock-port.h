@@ -49,7 +49,7 @@
 //
 // Note to maintainers: to reduce code duplication, prefer adding
 // portability utilities to Google Test's gtest-port.h instead of
-// here, as Google Mock depends on Google Test.  Only add a utility
+// here, as Google Mock depends on Google Test.  Only add_classic a utility
 // here if it's truly specific to Google Mock.
 
 #include "gtest/internal/gtest-port.h"

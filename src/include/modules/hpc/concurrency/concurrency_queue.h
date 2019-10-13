@@ -1,5 +1,4 @@
-#ifndef CONCURRENCY_QUEUE_H
-#define CONCURRENCY_QUEUE_H
+#pragma once
 
 #include <utility>
 #include <atomic>
@@ -16,10 +15,8 @@ namespace simple_concurrency
 	};
 	
 	template <typename T>
-	class concurrency_queue  // NOLINT(hicpp-special-member-functions, cppcoreguidelines-special-member-functions)
+	class concurrency_queue
 	{
-		std::atomic<node<T>*> head_;
-		std::atomic<node<T>*> tail_;
 	public:
 		concurrency_queue() : head_(nullptr), tail_(nullptr) {}
 
@@ -77,7 +74,8 @@ namespace simple_concurrency
 				front = next;
 			}
 		}
+	private:
+		std::atomic<node<T>*> head_;
+		std::atomic<node<T>*> tail_;
 	};
 }
-
-#endif

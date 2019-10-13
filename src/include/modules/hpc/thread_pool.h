@@ -1,5 +1,4 @@
-#ifndef THREAD_POOL_H
-#define THREAD_POOL_H
+#pragma once
 
 #include <thread>
 #include <future>
@@ -14,7 +13,7 @@ namespace hpc
 {
 
 	template <typename TasksRetT>
-	class thread_pool  // NOLINT
+	class thread_pool
 	{
 		struct thread_util
 		{
@@ -34,10 +33,11 @@ namespace hpc
 					}
 
 					std::pair<std::function<TasksRetT()>, std::promise<TasksRetT>*>* task = thp->tasks_queue_.concurrent_pop();
+
 					if(task == nullptr)
 						continue;
 
-					(*task->second).set_value(task->first());
+					task->second->set_value(task->first());
 					delete task->second;
 					delete task;
 
@@ -135,5 +135,3 @@ namespace hpc
 		}
 	};
 }
-
-#endif

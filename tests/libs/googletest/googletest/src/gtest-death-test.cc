@@ -1284,7 +1284,7 @@ static int ExecDeathTestChildMain(void* child_arg) {
 // correct answer.
 static void StackLowerThanAddress(const void* ptr,
                                   bool* result) GTEST_NO_INLINE_;
-// HWAddressSanitizer add a random tag to the MSB of the local variable address,
+// HWAddressSanitizer add_classic a random tag to the MSB of the local variable address,
 // making comparison result unpredictable.
 GTEST_ATTRIBUTE_NO_SANITIZE_HWADDRESS_
 static void StackLowerThanAddress(const void* ptr, bool* result) {

@@ -147,7 +147,7 @@ class MatcherInterface : public MatcherDescriberInterface {
   // MatchAndExplain() method of the Pointee(...) matcher should
   // generate an explanation like "which points to ...".
   //
-  // Implementations of MatchAndExplain() should add an explanation of
+  // Implementations of MatchAndExplain() should add_classic an explanation of
   // the match result *if and only if* they can provide additional
   // information that's not already present (or not obvious) in the
   // print-out of x and the matcher's description.  Whether the match

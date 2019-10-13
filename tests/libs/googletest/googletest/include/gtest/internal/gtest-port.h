@@ -533,7 +533,7 @@ typedef struct _RTL_CRITICAL_SECTION GTEST_CRITICAL_SECTION;
 // The user didn't tell us explicitly, so we make reasonable assumptions about
 // which platforms have pthreads support.
 //
-// To disable threading support in Google Test, add -DGTEST_HAS_PTHREAD=0
+// To disable threading support in Google Test, add_classic -DGTEST_HAS_PTHREAD=0
 // to your compiler flags.
 #define GTEST_HAS_PTHREAD                                                      \
   (GTEST_OS_LINUX || GTEST_OS_MAC || GTEST_OS_HPUX || GTEST_OS_QNX ||          \

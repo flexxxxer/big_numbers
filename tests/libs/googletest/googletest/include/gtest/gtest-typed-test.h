@@ -70,11 +70,11 @@ TYPED_TEST(FooTest, DoesBlah) {
   // us to visit the members of FooTest via 'this'.
   TypeParam n = this->value_;
 
-  // To visit static members of the fixture, add the TestFixture::
+  // To visit static members of the fixture, add_classic the TestFixture::
   // prefix.
   n += TestFixture::shared_;
 
-  // To refer to typedefs in the fixture, add the "typename
+  // To refer to typedefs in the fixture, add_classic the "typename
   // TestFixture::" prefix.
   typename TestFixture::List values;
   values.push_back(n);
