@@ -3,13 +3,13 @@
 #include <vector> // use std::vector
 #include <string> // use std::string
 #include <stdexcept> // use exceptions
-#include <compare>
+#include <compare> // use for C++ 20 spaceship
+#include <future> // use for std::future
+#include <random> // use for generate random data
 
-#include "modules/converter/bbc.h"
-
-#include <future>
-#include "modules/hpc/thread_pool.h"
-#include <random>
+#include "modules/hpc/thread_pool.h" // use for thread pool
+#include "modules/converter/bbc.h" // use for big base converters
+#include <emmintrin.h> // use for sse2
 
 namespace numbers
 {
@@ -125,16 +125,64 @@ namespace numbers
 			for (size_t i = a_size - 1; i != std::numeric_limits<size_t>::max(); i--)
 			{
 				if (a.bytes_[i] > b.bytes_[i])
-					return 0;
+					return 1;
 				if (a.bytes_[i] < b.bytes_[i])
 					return -1;
 			}
 
 			return 0;
 		}
-		static std::strong_ordering compare_optimized(const fast_big_integer& a, const fast_big_integer& b)
+		static sbyte compare_optimized(const fast_big_integer& a, const fast_big_integer& b)
 		{
-			throw std::exception("not implemented");
+			const size_t a_size = a.bytes_.size();
+			const size_t b_size = b.bytes_.size();
+
+			if (a_size < b_size)
+				return -1;
+			if (a_size > b_size)
+				return 1;
+			if (a_size == 0)
+				return 0;
+
+			constexpr int16_t simd_bytes_count = 16; // 128 bits
+
+			const size_t rem_count = a_size % simd_bytes_count;
+			const size_t others_count = (a_size / simd_bytes_count) * simd_bytes_count;
+
+			for (size_t i = a_size - 1; i != a_size - rem_count - 1; i--)
+			{
+				if (a.bytes_[i] > b.bytes_[i])
+					return 1;
+				if (a.bytes_[i] < b.bytes_[i])
+					return -1;
+			}
+
+			if (others_count == 0)
+				return 0;
+			
+			for(size_t i = others_count - simd_bytes_count;;)
+			{
+				const __m128i a_data = _mm_load_si128((__m128i*)&a.bytes_[i]);
+				const __m128i b_data = _mm_load_si128((__m128i*)&b.bytes_[i]);
+
+				const __m128i a_is_greater = _mm_cmpgt_epi8(a_data, b_data);
+				const __m128i a_is_letter = _mm_cmplt_epi8(a_data, b_data);
+				
+				const int32_t a_is_greater_flag = _mm_movemask_epi8(a_is_greater);
+				const int32_t a_is_letter_flag = _mm_movemask_epi8(a_is_letter);
+
+				if (a_is_greater_flag > a_is_letter_flag)
+					return 1;
+				if (a_is_greater_flag < a_is_letter_flag)
+					return -1;
+				
+				if(i == 0)
+					break;
+				
+				i -= simd_bytes_count;
+			}
+			
+			return 0;
 		}
 
 		/**
@@ -290,9 +338,10 @@ namespace numbers
 					tab['f'] = 15;
 					tab['F'] = 15;
 				}
-				constexpr int16_t hex_to_int(const char number) const
+
+				[[nodiscard]] constexpr int16_t hex_to_int(const char number) const
 				{
-					return tab[static_cast<int16_t>(number)];
+					return static_cast<int16_t>(tab[static_cast<int16_t>(number)]);
 				}
 				
 			} constexpr hex_table;
@@ -407,6 +456,23 @@ namespace numbers
 
 				return random_bytes;
 			}
+			static fast_big_integer random_sizeof(uint32_t byte_count)
+			{
+				const uint32_t size = byte_count;
+				if (size == 0) return fast_big_integer::zero();
+				
+				std::mt19937 rnd(std::random_device().operator()());
+				const std::uniform_int_distribution<std::mt19937::result_type> rand_byte(1, 254);
+
+				std::vector<byte> random_bytes(size);
+
+				for (size_t i = 0; i < size; i++)
+					random_bytes[i] = static_cast<byte>(rand_byte(rnd));
+
+				fast_big_integer::clear_zero_bytes(random_bytes);
+
+				return random_bytes;
+			}
 
 			/**
 			 * \param hex_string anything hex string
@@ -487,6 +553,7 @@ namespace numbers
 
 			this->bytes_ = fast_big_integer::create_from_hex_string(hex_str);
 		}
+		fast_big_integer(const char decimal_string[]) : fast_big_integer(std::string(decimal_string)) {}
 		/**
 		 * \brief init number from byte vector
 		 * \param bytes future number bytes
@@ -550,7 +617,15 @@ namespace numbers
 			static fast_big_integer two = { 2 };
 			return two;
 		}
-
+		/**
+		 * \return number with value "3"
+		 */
+		static fast_big_integer three()
+		{
+			static fast_big_integer three = { 3 };
+			return three;
+		}
+		
 		/**
 		 * \return dec string view of number
 		 */
@@ -576,6 +651,22 @@ namespace numbers
 		[[nodiscard]] std::vector<byte> to_bytes() const
 		{
 			return this->bytes_;
+		}
+		[[nodiscard]] size_t try_to_size_t() const
+		{
+			if (this->bytes_.size() > sizeof(size_t))
+				throw std::invalid_argument("number greater then max size_t value");
+			if (this->bytes_.empty())
+				return static_cast<size_t>(0);
+			
+			size_t value = 0;
+			for(size_t i = 0; i < this->bytes_.size(); i++)
+			{
+				value <<= 8;
+				value |= this->bytes_[this->bytes_.size() - i - 1];
+			}
+
+			return value;
 		}
 
 		/**
@@ -663,9 +754,9 @@ namespace numbers
 			
 			size_t counter = shift_count - byte_shift_count * eight; // get bits shift count
 			
-			for(byte* data = &this->bytes_.front(), i = this->bytes_.size();
-				counter != 0; 
-				counter--, data = &this->bytes_.front(), i = this->bytes_.size())
+			for(byte* data = static_cast<byte*>(&this->bytes_.front()), i = static_cast<byte>(this->bytes_.size());
+				counter != 0; // condition
+				counter--, data = static_cast<byte*>(&this->bytes_.front()), i = static_cast<byte>(this->bytes_.size()))
 			{
 				*data >>= 1;
 				
@@ -986,6 +1077,11 @@ namespace numbers
 			this->bytes_.clear();
 		}
 
+		void unsafe_set_back_bit_to(bool value)
+		{
+			this->bytes_.front() |= static_cast<byte>(value);
+		}
+
 		/**
 		 * \brief perform prefix increment
 		 * \return this incremented value
@@ -1188,16 +1284,15 @@ namespace numbers
 			{
 				static fast_big_integer prod_tree(const fast_big_integer& l, const fast_big_integer& r)
 				{
-					const sbyte compare_result = fast_big_integer::compare(l, r);
-					if (compare_result == 1)
+					if (l > r)
 						return fast_big_integer::one();
-					if (compare_result == 0)
+					if (l == r)
 						return l;
 					if ((r - l).is_one())
 						return r * l;
 
-					fast_big_integer m = l; m.add(r); m.fast_shr(1);
-					fast_big_integer m_plus_one = m; ++m_plus_one;
+					const fast_big_integer m = l.sum(r) >> 1;
+					const fast_big_integer m_plus_one = m.plus_one();
 
 					return factorial::prod_tree(l, m) * factorial::prod_tree(m_plus_one, r);
 				}
@@ -1218,16 +1313,15 @@ namespace numbers
 				// calculate tree on one thread
 				static fast_big_integer prod_tree_one_thread(const fast_big_integer& l, const fast_big_integer& r)
 				{
-					const sbyte compare_result = fast_big_integer::compare(l, r);
-					if (compare_result == 1)
+					if (l > r)
 						return fast_big_integer::one();
-					if (compare_result == 0)
+					if (l == r)
 						return l;
 					if ((r - l).is_one())
 						return r * l;
 
-					fast_big_integer m = l; m.add(r); m.fast_shr(1);
-					fast_big_integer m_plus_one = m; ++m_plus_one;
+					const fast_big_integer m = l.sum(r) >> 1;
+					const fast_big_integer m_plus_one = m.plus_one();
 
 					return factorial_parallel::prod_tree_one_thread(l, m) * factorial_parallel::prod_tree_one_thread(m_plus_one, r);
 				}
@@ -1239,12 +1333,11 @@ namespace numbers
 					splitted_tree.reserve(thread_count);
 
 					const fast_big_integer step = (r - l) / thread_count;
-					sbyte compare_result = -1;
+					fast_big_integer i = l;
 
-					for (fast_big_integer i = l; compare_result == -1; )
+					do
 					{
 						fast_big_integer next_step_value = i + step;
-
 #ifdef _MSC_VER
 						splitted_tree.emplace_back(i, next_step_value);
 #elif
@@ -1252,12 +1345,10 @@ namespace numbers
 							std::make_pair(i, next_step_value)
 						);
 #endif
-						i = ++next_step_value;
+						i = next_step_value.plus_one();
+					} while (i < r);
 
-						compare_result = fast_big_integer::compare(i, r);
-					}
-
-					if (compare_result == 1)
+					if (i > r)
 						splitted_tree.back().second = r;
 
 					return splitted_tree;
@@ -1404,17 +1495,45 @@ namespace numbers
 			return log;
 		}
 
+		[[nodiscard]] fast_big_integer plus_one() const
+		{
+			fast_big_integer copy = *this;
+			return ++copy;
+		}
+		[[nodiscard]] fast_big_integer minus_one() const
+		{
+			fast_big_integer copy = *this;
+			return --copy;
+		}
+
 		std::strong_ordering operator <=> (const fast_big_integer& n) const
 		{
-			return fast_big_integer::compare(*this, n) <=> 0;
+			return fast_big_integer::compare_optimized(*this, n) <=> 0;
 		}
 		bool operator == (const fast_big_integer& n) const
 		{
-			return fast_big_integer::compare(*this, n) == 0;
+			return fast_big_integer::compare_optimized(*this, n) == 0;
 		}
 		bool operator != (const fast_big_integer& n) const
 		{
-			return fast_big_integer::compare(*this, n) != 0;
+			return fast_big_integer::compare_optimized(*this, n) != 0;
+		}
+
+		[[nodiscard]] bool is_equal(const fast_big_integer& value) const
+		{
+			return fast_big_integer::compare_optimized(*this, value) == 0;
+		}
+		[[nodiscard]] bool is_not_equal(const fast_big_integer& value) const
+		{
+			return fast_big_integer::compare_optimized(*this, value) != 0;
+		}
+		[[nodiscard]] bool is_letter_then(const fast_big_integer& value) const
+		{
+			return fast_big_integer::compare_optimized(*this, value) == -1;
+		}
+		[[nodiscard]] bool is_greater_then(const fast_big_integer& value) const
+		{
+			return fast_big_integer::compare_optimized(*this, value) == 1;
 		}
 	};
 }
